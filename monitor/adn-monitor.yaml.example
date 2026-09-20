@@ -162,3 +162,45 @@ DASHBOARD:
       # - name: "Scheduled maintenance Sunday 10:00–12:00 UTC"
       # - name: "New reflector"
       #   url: "https://adn.systems"
+
+# Map page (/map). Markers come from the coordinates each peer sends when it
+# logs in (RPTC); systems that report none are left out, or placed on their
+# country when APPROX_BY_COUNTRY is on. Layers are chosen by the visitor.
+MAP:
+  # Show the map page and its navbar entry
+  ENABLED: true
+
+  # Raster tiles. By default OpenStreetMap tiles are used and, with the dark
+  # theme, darkened with a CSS filter: no second provider and no API key.
+  # Set TILE_URL_DARK to use a real dark basemap instead, and keep ATTRIBUTION
+  # in line with what that provider asks for. Note CARTO basemaps now stamp
+  # "API KEY REQUIRED" on their tiles unless you sign up for a key.
+  # TILE_URL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+  # TILE_URL_DARK: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+  # ATTRIBUTION: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  # MAX_ZOOM: 18
+
+  # First view when the visitor has no saved one: [latitude, longitude] + zoom
+  CENTER: [20, 0]
+  ZOOM: 2
+
+  # Privacy: decimals kept for the coordinates sent to the browser.
+  # 2 is about 1 km, 3 about 100 m, null keeps them as reported.
+  # Hotspots usually sit at someone's home, so they are coarsened by default.
+  HOTSPOT_PRECISION: 2
+  REPEATER_PRECISION: null
+
+  # Place systems with no coordinates on their country (from the DMR ID prefix).
+  # Those markers are drawn dashed and labelled as approximate.
+  APPROX_BY_COUNTRY: true
+
+  # Optional extra layer with positions from your own feed (APRS gateway, GPS
+  # service...). GeoJSON points, a list of {callsign, lat, lon} or
+  # {"stations": [...]}. Left empty the layer is not offered.
+  # GPS_URL: "https://example.org/aprs/positions.json"
+  # GPS_LABEL: "APRS"
+  # GPS_REFRESH_SEC: 60
+
+  # Fixed coordinates for systems that report none (peer ID: [lat, lon])
+  OVERRIDES:
+    # 2130035: [42.5063, 1.5218]

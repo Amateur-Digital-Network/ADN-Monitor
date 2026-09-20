@@ -42,6 +42,7 @@ El comportamiento del dashboard y del monitor se define en YAML bajo la carpeta 
   - **ADN_CONNECTION**: IP y puerto del report server ADN; **HELLO_TIMEOUT_MS** opcional (esperar HELLO opcode `0xFF` de **adn-server** antes de asumir **adn-dmr-server** legacy). El modo detectado es **legacy** o **v2** (campo JSON `mode` en mensajes WebSocket con prefijo `v`). Con v2, el footer muestra versiones **Monitor** y **Server** desde HELLO.
   - **ALIASES**: URLs y archivos de alias (peers, suscriptores, talkgroups).
   - **LOGGER**, **DASHBOARD** (título, idioma, enlaces nav/footer/news marquee).
+  - **MAP**: página de mapa (`/map`). Teselas (claras/oscuras) y atribución, vista inicial, precisión de coordenadas por tipo de sistema, respaldo por país para los sistemas que no informan posición, feed GPS/APRS externo opcional y coordenadas fijas por peer. Ver la sección **Mapa** más abajo.
 
 Las rutas dentro del YAML (p. ej. `LOG_PATH`, `PATH` de archivos de alias) son relativas al directorio **monitor/** cuando ejecutas el monitor desde ahí.
 
@@ -177,6 +178,32 @@ sudo nginx -t && sudo systemctl reload nginx
 Copia y adapta rutas, dominios y certificados a tu servidor.
 
 ---
+
+## Mapa
+
+`/map` dibuja la red en un solo mapa y deja que cada visitante elija las capas:
+repetidores, hotspots, puentes, el tráfico **en el aire** en ese momento (tanto
+los peers de este servidor como las llamadas que entran por OpenBridge) y, si se
+configura, un feed **GPS** externo. Recuerda las capas y la vista elegidas, y tiene pantalla completa para
+el móvil.
+
+Las teselas son de OpenStreetMap y, con el tema oscuro, se oscurecen con un
+filtro CSS: no hace falta un segundo proveedor ni ninguna API key.
+`MAP.TILE_URL_DARK` permite usar un basemap oscuro de verdad si lo tienes.
+
+Las posiciones salen de `LATITUDE` / `LONGITUDE` que el peer envía al
+conectarse (RPTC). Los peers que no las informan quedan fuera, o se dibujan
+discontinuos sobre su país (prefijo del DMR ID) si `APPROX_BY_COUNTRY` está
+activo; `OVERRIDES` fija coordenadas exactas para un peer concreto.
+
+Privacidad: las coordenadas de un hotspot suelen ser el domicilio de alguien,
+así que `HOTSPOT_PRECISION` (2 decimales, alrededor de 1 km) las redondea
+**antes** de enviarlas al navegador. Ponlo a `null` para publicarlas tal cual,
+o `ENABLED: false` para quitar la página.
+
+Con **adn-server** (v2) el mapa necesita un servidor que incluya `latitude` /
+`longitude` en su informe `dashboard_state`; con el **adn-dmr-server** legacy ya
+vienen en `CONFIG`.
 
 ## Soporte IPv6
 

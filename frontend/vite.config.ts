@@ -53,6 +53,7 @@ export default defineConfig({
             if (id.includes('@mui')) return 'vendor-mui';
             if (id.includes('react-dom') || id.includes('react/')) return 'vendor-react';
             if (id.includes('react-router') || id.includes('react-i18next') || id.includes('i18next')) return 'vendor-router-i18n';
+            if (id.includes('leaflet')) return 'vendor-leaflet';
           }
         },
       },

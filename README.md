@@ -44,6 +44,7 @@ Dashboard and monitor behaviour are defined in YAML under the monitor folder:
   - **ADN_CONNECTION**: IP and port of the ADN report server; optional **HELLO_TIMEOUT_MS** (wait for opcode `0xFF` HELLO from **adn-server** before assuming legacy **adn-dmr-server**). Detected mode is **legacy** or **v2** (JSON field `mode` on WebSocket messages prefixed with `v`). With v2, the footer shows **Monitor** and **Server** versions from HELLO.
   - **ALIASES**: URLs and files for alias (peers, subscribers, talkgroups).
   - **LOGGER**, **DASHBOARD** (title, language, nav/footer/news marquee links).
+  - **MAP**: map page (`/map`). Tiles (light/dark) and attribution, first view, coordinate precision per system type, country fallback for systems that report no position, optional external GPS/APRS feed and per-peer coordinate overrides. See the **Map** section below.
 
 Paths inside the YAML (e.g. `LOG_PATH`, `PATH` for alias files) are relative to the **monitor/** directory when you run the monitor from there.
 
@@ -179,6 +180,32 @@ sudo nginx -t && sudo systemctl reload nginx
 Copy and adapt paths, domains, and certificates to your server.
 
 ---
+
+## Map
+
+`/map` draws the network on one map and lets each visitor pick the layers:
+repeaters, hotspots, bridges, traffic **on air** right now (both this server's
+peers and the calls coming in over OpenBridge) and, when configured, an
+external **GPS** feed. It
+remembers the chosen layers and view, and has a full-screen mode for phones.
+
+Tiles come from OpenStreetMap and, with the dark theme, are darkened with a CSS
+filter, so no second tile provider and no API key are needed. `MAP.TILE_URL_DARK`
+switches to a real dark basemap if you have one.
+
+Positions come from the `LATITUDE` / `LONGITUDE` a peer sends in its login
+(RPTC). Peers that report none are hidden, or drawn dashed over their country
+(DMR ID prefix) when `APPROX_BY_COUNTRY` is on; `OVERRIDES` pins exact
+coordinates for a given peer ID.
+
+Privacy: a hotspot's coordinates are usually someone's home, so
+`HOTSPOT_PRECISION` (2 decimals, about 1 km) rounds them **before** they are
+sent to the browser. Set it to `null` to publish them as reported, or set
+`ENABLED: false` to remove the page.
+
+With **adn-server** (v2) the map needs a server that includes `latitude` /
+`longitude` in its `dashboard_state` report; with the legacy **adn-dmr-server**
+they are already in `CONFIG`.
 
 ## IPv6 support
 
