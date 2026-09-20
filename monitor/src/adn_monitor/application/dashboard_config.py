@@ -186,19 +186,26 @@ def _map_value(json_key: str, value: object) -> Any:
 
 
 def _normalize_map(config: dict[str, Any], dashboard: dict[str, Any]) -> dict[str, Any]:
-    """MAP settings for the map page (top-level ``MAP:`` or nested under ``DASHBOARD:``)."""
+    """MAP settings for the map page (top-level ``MAP:`` or nested under ``DASHBOARD:``).
+
+    The page can be turned on and off either with ``DASHBOARD.SHOW_MAP`` (same shape as
+    ``SHOW_CONSOLE`` / ``SELF_SERVICE``) or with ``MAP.ENABLED``. When both are set,
+    ``SHOW_MAP`` wins, so one line in DASHBOARD is enough to hide the page.
+    """
     raw = config.get("MAP") or config.get("map") or dashboard.get("MAP") or dashboard.get("map") or {}
     out = dict(_MAP_DEFAULTS)
-    if not isinstance(raw, dict):
-        return out
-    for yaml_key, json_key in _MAP_KEYS:
-        if yaml_key in raw:
-            value = raw[yaml_key]
-        elif yaml_key.lower() in raw:
-            value = raw[yaml_key.lower()]
-        else:
-            continue
-        out[json_key] = _map_value(json_key, value)
+    if isinstance(raw, dict):
+        for yaml_key, json_key in _MAP_KEYS:
+            if yaml_key in raw:
+                value = raw[yaml_key]
+            elif yaml_key.lower() in raw:
+                value = raw[yaml_key.lower()]
+            else:
+                continue
+            out[json_key] = _map_value(json_key, value)
+    if "SHOW_MAP" in dashboard or "show_map" in dashboard:
+        show_map = dashboard.get("SHOW_MAP") if "SHOW_MAP" in dashboard else dashboard.get("show_map")
+        out["enabled"] = _bool(show_map)
     return out
 
 

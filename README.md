@@ -200,8 +200,11 @@ coordinates for a given peer ID.
 
 Privacy: a hotspot's coordinates are usually someone's home, so
 `HOTSPOT_PRECISION` (2 decimals, about 1 km) rounds them **before** they are
-sent to the browser. Set it to `null` to publish them as reported, or set
-`ENABLED: false` to remove the page.
+sent to the browser. Set it to `null` to publish them as reported.
+
+The page is switched on and off with `DASHBOARD.SHOW_MAP` (same shape as
+`SHOW_CONSOLE`) or with `MAP.ENABLED`; `SHOW_MAP` wins when both are set. Off,
+neither the page nor its navbar entry exists.
 
 With **adn-server** (v2) the map needs a server that includes `latitude` /
 `longitude` in its `dashboard_state` report; with the legacy **adn-dmr-server**
