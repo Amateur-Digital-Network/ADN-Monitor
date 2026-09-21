@@ -1,6 +1,6 @@
 # ADN Systems Monitor
 
-**Version 2.5.3** — pairs with **adn-server 2.0.0** (report v2 slim wire + JSON HELLO).
+**Version 2.6** — pairs with **adn-server 2.6** (report v2 slim wire + JSON HELLO).
 
 Releases are cut from **`master`** (merge `develop` → `master` when ready; semver from commit history since last tag).
 
@@ -166,7 +166,7 @@ sudo nginx -t && sudo systemctl reload nginx
 2. `adn-monitor.yaml` and `.env` configured; **ADN_CONFIG_PATH** set.
 3. `npm run build` in `frontend/`; Nginx serves `frontend/dist/`.
 4. `monitor.py` running (systemd); Nginx proxies `/api` and `/ws` to `LISTEN_PORT`.
-5. **adn-server** **2.0.0** (report v2 slim wire + JSON HELLO; upgrade/restart if the footer shows an older server version).
+5. **adn-server** **2.6** (report v2 slim wire + JSON HELLO; upgrade/restart if the footer shows an older server version).
 
 ---
 
