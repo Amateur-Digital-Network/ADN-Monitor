@@ -32,6 +32,7 @@ from collections import deque
 from ..domain import Failure, ReportProtocolError, ServerMode, Success, is_fail
 from ..domain.value_objects import Opcode
 from .alias_service import AliasService
+from .dashboard_config import resolve_map_precision
 from .ports import (
     AliasRepository,
     BroadcastPort,
@@ -149,7 +150,7 @@ def _apply_dashboard_state_payload(
             state.dashboard_state_ts,
         )
         return Success(None)
-    config_dict = dashboard_state_to_config(payload)
+    config_dict = dashboard_state_to_config(payload, map_precision=resolve_map_precision(config_global))
     if not config_dict:
         logger.warning("(REPORT) dashboard_state produced empty CONFIG")
         return Success(None)
@@ -423,7 +424,7 @@ def process_message(
             return Success(None)
         state.topology_snapshot = topology
         state.topology_seq = seq
-        config_dict = topology_to_config(topology)
+        config_dict = topology_to_config(topology, map_precision=resolve_map_precision(config_global))
         _apply_config_to_state(state, config_dict, config_global)
         n_m, n_p, n_o, n_mp = _ctable_counts(state)
         logger.info(
@@ -512,7 +513,7 @@ def process_message(
             seq = int(merged.get("seq", state.topology_seq))
             state.topology_snapshot = merged
             state.topology_seq = seq
-            config_dict = topology_to_config(merged)
+            config_dict = topology_to_config(merged, map_precision=resolve_map_precision(config_global))
             _apply_config_to_state(state, config_dict, config_global)
             logger.info("(REPORT) topology delta applied seq=%s", seq)
             return Success(None)

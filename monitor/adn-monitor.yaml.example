@@ -130,10 +130,6 @@ DASHBOARD:
   # Console: show Console page in Info menu (call start/end messages). Set to true to enable.
   SHOW_CONSOLE: false
 
-  # Map page (/map) and its navbar entry. Same switch as MAP.ENABLED below; when both
-  # are present this one wins, so the page can be turned off from here alone.
-  SHOW_MAP: true
-
   # JSON feed for /serverstatus (network server list). Proxied at GET /api/servers/status.
   # Default if omitted: https://adn.systems/servers/status.json
   # SERVER_STATUS_URL: "https://adn.systems/servers/status.json"
@@ -171,8 +167,7 @@ DASHBOARD:
 # logs in (RPTC); systems that report none are left out, or placed on their
 # country when APPROX_BY_COUNTRY is on. Layers are chosen by the visitor.
 MAP:
-  # Show the map page and its navbar entry (same as DASHBOARD.SHOW_MAP, which wins
-  # when both are set)
+  # Show the map page and its navbar entry.
   ENABLED: true
 
   # Raster tiles. By default OpenStreetMap tiles are used and, with the dark

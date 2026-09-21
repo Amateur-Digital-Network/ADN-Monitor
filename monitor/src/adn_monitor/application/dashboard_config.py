@@ -25,6 +25,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from ..version import read_version
@@ -188,9 +189,7 @@ def _map_value(json_key: str, value: object) -> Any:
 def _normalize_map(config: dict[str, Any], dashboard: dict[str, Any]) -> dict[str, Any]:
     """MAP settings for the map page (top-level ``MAP:`` or nested under ``DASHBOARD:``).
 
-    The page can be turned on and off either with ``DASHBOARD.SHOW_MAP`` (same shape as
-    ``SHOW_CONSOLE`` / ``SELF_SERVICE``) or with ``MAP.ENABLED``. When both are set,
-    ``SHOW_MAP`` wins, so one line in DASHBOARD is enough to hide the page.
+    The page is turned on and off with ``MAP.ENABLED`` alone.
     """
     raw = config.get("MAP") or config.get("map") or dashboard.get("MAP") or dashboard.get("map") or {}
     out = dict(_MAP_DEFAULTS)
@@ -203,10 +202,23 @@ def _normalize_map(config: dict[str, Any], dashboard: dict[str, Any]) -> dict[st
             else:
                 continue
             out[json_key] = _map_value(json_key, value)
-    if "SHOW_MAP" in dashboard or "show_map" in dashboard:
-        show_map = dashboard.get("SHOW_MAP") if "SHOW_MAP" in dashboard else dashboard.get("show_map")
-        out["enabled"] = _bool(show_map)
     return out
+
+
+@dataclass(frozen=True, slots=True)
+class MapPrecision:
+    hotspot: int | None
+    repeater: int | None
+
+
+def resolve_map_precision(config: dict[str, Any]) -> MapPrecision:
+    """HOTSPOT_PRECISION / REPEATER_PRECISION, for report_mapper to round peer
+    coordinates before they reach any WS/REST consumer (same MAP config as the page)."""
+    dashboard = config.get("DASHBOARD") or {}
+    if not isinstance(dashboard, dict):
+        dashboard = {}
+    normalized = _normalize_map(config, dashboard)
+    return MapPrecision(hotspot=normalized["hotspotPrecision"], repeater=normalized["repeaterPrecision"])
 
 
 def build_dashboard_config(config: dict[str, Any]) -> dict[str, Any]:

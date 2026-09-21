@@ -60,16 +60,3 @@ def test_loader_keeps_top_level_map_section(tmp_path):
     result = load_config(str(yaml_path))
     config = result.value if hasattr(result, "value") else result
     assert build_dashboard_config(config)["map"]["zoom"] == 6
-
-
-def test_show_map_switch_in_dashboard_section():
-    """DASHBOARD.SHOW_MAP follows the SHOW_CONSOLE / SELF_SERVICE shape and wins."""
-    off = build_dashboard_config({"DASHBOARD": {"SHOW_MAP": False}})["map"]
-    assert off["enabled"] is False
-
-    on = build_dashboard_config({"DASHBOARD": {"show_map": "yes"}, "MAP": {"ENABLED": False}})["map"]
-    assert on["enabled"] is True
-
-    # Without SHOW_MAP the MAP section still decides.
-    only_map = build_dashboard_config({"DASHBOARD": {}, "MAP": {"ENABLED": False}})["map"]
-    assert only_map["enabled"] is False

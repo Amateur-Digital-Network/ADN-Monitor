@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from adn_monitor.application.dashboard_config import MapPrecision
 from adn_monitor.application.report_mapper import (
     REPORT_PROTOCOL,
     dashboard_state_to_config,
@@ -116,6 +117,102 @@ def test_topology_to_config_maps_rf_mode_and_ua_multi():
     peer = config["SYS-1"]["PEERS"][(3120001).to_bytes(4, "big")]
     assert peer["RF_MODE"] == "simplex"
     assert peer["UA_MULTI_TGS"] == {"2": [730444]}
+
+
+def _topology_with_peer(peer: dict) -> dict:
+    return {
+        "type": "topology",
+        "seq": 1,
+        "ts": 1.0,
+        "systems": [{
+            "name": "SYS-1",
+            "mode": "MASTER",
+            "enabled": True,
+            "peers": [peer],
+        }],
+    }
+
+
+def test_topology_to_config_rounds_hotspot_coordinates():
+    """7+ digit DMR ID = hotspot (same classification as mapPoints.ts:peerKind);
+    rounding must happen here, before the peer dict reaches any WS/REST consumer."""
+    peer = {"id": 3120001, "connected": True, "latitude": "-33.448912", "longitude": "-70.669266"}
+    config = topology_to_config(
+        _topology_with_peer(peer), ts=1.0, map_precision=MapPrecision(hotspot=2, repeater=None)
+    )
+    row = config["SYS-1"]["PEERS"][(3120001).to_bytes(4, "big")]
+    assert row["LATITUDE"] == "-33.45"
+    assert row["LONGITUDE"] == "-70.67"
+
+
+def test_topology_to_config_does_not_round_repeater_when_precision_none():
+    """Short DMR ID = repeater; repeaterPrecision: null means full precision, same as
+    the map page's own default."""
+    peer = {"id": 730002, "connected": True, "latitude": "-33.448912", "longitude": "-70.669266"}
+    config = topology_to_config(
+        _topology_with_peer(peer), ts=1.0, map_precision=MapPrecision(hotspot=2, repeater=None)
+    )
+    row = config["SYS-1"]["PEERS"][(730002).to_bytes(4, "big")]
+    assert row["LATITUDE"] == "-33.448912"
+    assert row["LONGITUDE"] == "-70.669266"
+
+
+def test_topology_to_config_parses_comma_decimal_and_hemisphere_suffix():
+    """Same formats mapPoints.ts:parseCoordinate accepts: comma decimal, a trailing
+    hemisphere letter, a leading +."""
+    peer = {"id": 3120001, "connected": True, "latitude": "33,448912S", "longitude": "+70.669266"}
+    config = topology_to_config(
+        _topology_with_peer(peer), ts=1.0, map_precision=MapPrecision(hotspot=2, repeater=2)
+    )
+    row = config["SYS-1"]["PEERS"][(3120001).to_bytes(4, "big")]
+    assert row["LATITUDE"] == "-33.45"
+    assert row["LONGITUDE"] == "70.67"
+
+
+def test_topology_to_config_treats_zero_island_as_no_position():
+    peer = {"id": 3120001, "connected": True, "latitude": "0.0", "longitude": "0.0"}
+    config = topology_to_config(
+        _topology_with_peer(peer), ts=1.0, map_precision=MapPrecision(hotspot=2, repeater=2)
+    )
+    row = config["SYS-1"]["PEERS"][(3120001).to_bytes(4, "big")]
+    assert row["LATITUDE"] == "0.0"
+    assert row["LONGITUDE"] == "0.0"
+
+
+def test_topology_to_config_leaves_coordinates_raw_without_map_precision():
+    """Default (no map_precision passed) keeps the pre-fix behavior: raw pass-through."""
+    peer = {"id": 3120001, "connected": True, "latitude": "-33.448912", "longitude": "-70.669266"}
+    config = topology_to_config(_topology_with_peer(peer), ts=1.0)
+    row = config["SYS-1"]["PEERS"][(3120001).to_bytes(4, "big")]
+    assert row["LATITUDE"] == "-33.448912"
+    assert row["LONGITUDE"] == "-70.669266"
+
+
+def test_dashboard_state_to_config_rounds_hotspot_coordinates():
+    payload = {
+        "type": "dashboard_state",
+        "ts": 1.0,
+        "ctable": {
+            "MASTERS": {
+                "SYS-1": {
+                    "mode": "MASTER",
+                    "peers": {
+                        3120001: {
+                            "id": 3120001,
+                            "latitude": "-33.448912",
+                            "longitude": "-70.669266",
+                        }
+                    },
+                }
+            },
+            "PEERS": {},
+            "OPENBRIDGES": {},
+        },
+    }
+    cfg = dashboard_state_to_config(payload, map_precision=MapPrecision(hotspot=2, repeater=None))
+    row = cfg["SYS-1"]["PEERS"][(3120001).to_bytes(4, "big")]
+    assert row["LATITUDE"] == "-33.45"
+    assert row["LONGITUDE"] == "-70.67"
 
 
 def test_dashboard_state_to_config_omits_obp_connected_when_absent():

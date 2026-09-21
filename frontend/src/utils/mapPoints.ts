@@ -99,6 +99,9 @@ export type GpsPoint = {
 };
 
 const ZERO_ISLAND = 0.0005;
+/** Degrees of spread for the pseudo-random offset so peers sharing one country
+ * centroid do not stack up on the same point. */
+const COUNTRY_JITTER_SPREAD_DEG = 1.1;
 
 /** Accept "41.1234", "41,1234", " -3.70 " and the N/S/E/W suffixes some radios send. */
 export function parseCoordinate(raw: unknown, max: number): number | null {
@@ -189,7 +192,7 @@ function resolvePosition(
   if (!allowApprox) return null;
   const centroid = centroidForDmrId(peerId);
   if (!centroid) return null;
-  const [dLat, dLon] = jitter(peerId, 1.1);
+  const [dLat, dLon] = jitter(peerId, COUNTRY_JITTER_SPREAD_DEG);
   return { lat: centroid.lat + dLat, lon: centroid.lon + dLon, source: 'country' };
 }
 
@@ -340,7 +343,7 @@ export function buildOpenBridgePoints(
       seen.add(dedupeKey);
       const centroid = centroidForDmrId(dmrId);
       if (!centroid) continue;
-      const [dLat, dLon] = jitter(dmrId || streamId, 1.1);
+      const [dLat, dLon] = jitter(dmrId || streamId, COUNTRY_JITTER_SPREAD_DEG);
       points.push({
         key: `obp-${system}-${streamId}`,
         peerId: dmrId,
