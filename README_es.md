@@ -200,9 +200,8 @@ Privacidad: las coordenadas de un hotspot suelen ser el domicilio de alguien,
 así que `HOTSPOT_PRECISION` (2 decimales, alrededor de 1 km) las redondea
 **antes** de enviarlas al navegador. Ponlo a `null` para publicarlas tal cual.
 
-La página se activa y desactiva con `DASHBOARD.SHOW_MAP` (igual que
-`SHOW_CONSOLE`) o con `MAP.ENABLED`; si están los dos, manda `SHOW_MAP`.
-Desactivada no existen ni la página ni su entrada en el menú.
+La página se activa y desactiva con `MAP.ENABLED`. Desactivada no existen ni
+la página ni su entrada en el menú.
 
 Con **adn-server** (v2) el mapa necesita un servidor que incluya `latitude` /
 `longitude` en su informe `dashboard_state`; con el **adn-dmr-server** legacy ya

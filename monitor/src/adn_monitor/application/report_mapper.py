@@ -27,10 +27,12 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from typing import Any
 
 from ..domain import Failure, ReportProtocolError, Success
+from .dashboard_config import MapPrecision
 
 logger = logging.getLogger("adn-monitor")
 
@@ -110,6 +112,57 @@ def _legacy_peer_field(legacy_key: str, value: Any) -> Any:
     return value
 
 
+_HEMISPHERE_RE = re.compile(r"^([NSEW])|([NSEW])$", re.IGNORECASE)
+_ZERO_ISLAND = 0.0005
+_HOTSPOT_ID_MIN_DIGITS = 7
+
+
+def _parse_coordinate(raw: Any, max_abs: float) -> float | None:
+    """Mirror frontend/src/utils/mapPoints.ts:parseCoordinate — same formats radios send."""
+    if raw is None:
+        return None
+    text = str(raw).strip().replace(",", ".")
+    if not text:
+        return None
+    sign = 1
+    match = _HEMISPHERE_RE.search(text)
+    if match:
+        letter = (match.group(1) or match.group(2) or "").upper()
+        if letter in ("S", "W"):
+            sign = -1
+        text = _HEMISPHERE_RE.sub("", text, count=1).strip()
+    try:
+        value = float(text)
+    except ValueError:
+        return None
+    signed = sign * value
+    if abs(signed) > max_abs:
+        return None
+    return signed
+
+
+def _round_peer_coordinates(peer_conf: dict[str, Any], pid: int, map_precision: MapPrecision | None) -> None:
+    """Coarsen LATITUDE/LONGITUDE before the peer dict reaches any WS/REST consumer.
+
+    This is the privacy boundary: the map page's own client-side rounding runs too
+    late, after the raw value already went out to every dashboard client, not just
+    those with the map page open.
+    """
+    if map_precision is None:
+        return
+    lat = _parse_coordinate(peer_conf.get("LATITUDE"), 90.0)
+    lon = _parse_coordinate(peer_conf.get("LONGITUDE"), 180.0)
+    if lat is None or lon is None or (abs(lat) < _ZERO_ISLAND and abs(lon) < _ZERO_ISLAND):
+        return
+    is_hotspot = len(str(pid)) >= _HOTSPOT_ID_MIN_DIGITS
+    decimals = map_precision.hotspot if is_hotspot else map_precision.repeater
+    if decimals is None or decimals < 0:
+        return
+    factor = 10**decimals
+    peer_conf["LATITUDE"] = str(round(lat * factor) / factor)
+    peer_conf["LONGITUDE"] = str(round(lon * factor) / factor)
+
+
 _CALL_FAMILY_TO_CSV = {
     "GROUP": "GROUP VOICE",
     "PRIVATE": "PRIVATE VOICE",
@@ -117,7 +170,9 @@ _CALL_FAMILY_TO_CSV = {
 }
 
 
-def dashboard_state_to_config(doc: dict[str, Any], *, ts: float | None = None) -> dict[str, Any]:
+def dashboard_state_to_config(
+    doc: dict[str, Any], *, ts: float | None = None, map_precision: MapPrecision | None = None
+) -> dict[str, Any]:
     """Build CONFIG dict from ``dashboard_state`` (TCP STATE_SND or MQTT state topic)."""
     if doc.get("type") != "dashboard_state":
         return {}
@@ -178,6 +233,7 @@ def dashboard_state_to_config(doc: dict[str, Any], *, ts: float | None = None) -
             for json_key, legacy_key in _PEER_JSON_TO_LEGACY:
                 if json_key in peer:
                     peer_conf[legacy_key] = _legacy_peer_field(legacy_key, peer[json_key])
+            _round_peer_coordinates(peer_conf, pid, map_precision)
             ts1 = peer.get("ts1_static")
             if isinstance(ts1, list) and ts1:
                 peer_conf["TS1_STATIC"] = ",".join(str(x) for x in ts1)
@@ -239,7 +295,9 @@ def dashboard_state_to_config(doc: dict[str, Any], *, ts: float | None = None) -
     return config
 
 
-def topology_to_config(topology: dict[str, Any], *, ts: float | None = None) -> dict[str, Any]:
+def topology_to_config(
+    topology: dict[str, Any], *, ts: float | None = None, map_precision: MapPrecision | None = None
+) -> dict[str, Any]:
     """Build a CONFIG dict compatible with ``build_hblink_table`` / ``update_hblink_table``."""
     epoch = float(topology.get("ts", time.time())) if ts is None else ts
     config: dict[str, Any] = {}
@@ -293,6 +351,7 @@ def topology_to_config(topology: dict[str, Any], *, ts: float | None = None) -> 
             for json_key, legacy_key in _PEER_JSON_TO_LEGACY:
                 if json_key in peer:
                     peer_conf[legacy_key] = _legacy_peer_field(legacy_key, peer[json_key])
+            _round_peer_coordinates(peer_conf, pid, map_precision)
             ts1 = peer.get("ts1_static")
             if isinstance(ts1, list) and ts1:
                 peer_conf["TS1_STATIC"] = ",".join(str(x) for x in ts1)
