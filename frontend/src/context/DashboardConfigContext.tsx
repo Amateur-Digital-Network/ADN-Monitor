@@ -59,6 +59,48 @@ const defaultAliases = buildDefaultAliases();
 
 export type NavLinkItem = { name: string; url: string };
 
+/** Map page settings (MAP section of adn-monitor.yaml, served by /api/config/dashboard). */
+export type MapConfig = {
+  enabled: boolean;
+  /** Raster tile template; with the dark theme tileUrlDark is used when set. */
+  tileUrl: string;
+  /** Dark tiles. Empty means: reuse tileUrl and darken it with a CSS filter. */
+  tileUrlDark: string;
+  attribution: string;
+  maxZoom: number;
+  center: [number, number];
+  zoom: number;
+  /** Decimals kept for hotspot / repeater coordinates (null = as reported). */
+  hotspotPrecision: number | null;
+  repeaterPrecision: number | null;
+  /** Fall back to the country centroid of the DMR ID when no coordinates are known. */
+  approxByCountry: boolean;
+  /** Optional external position feed (GeoJSON or lat/lon list) for the GPS layer. */
+  gpsUrl: string;
+  gpsLabel: string;
+  gpsRefreshSec: number;
+  /** Fixed coordinates per peer ID, for systems that report none. */
+  overrides: Record<string, [number, number]>;
+};
+
+export const defaultMapConfig: MapConfig = {
+  enabled: true,
+  tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  /** Empty: the light tiles are darkened with a CSS filter, so no second provider is needed. */
+  tileUrlDark: '',
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 18,
+  center: [20, 0],
+  zoom: 2,
+  hotspotPrecision: 2,
+  repeaterPrecision: null,
+  approxByCountry: true,
+  gpsUrl: '',
+  gpsLabel: '',
+  gpsRefreshSec: 60,
+  overrides: {},
+};
+
 type DashboardConfig = {
   title: string;
   /** Monitor release version from pyproject.toml (runtime, no frontend rebuild needed). */
@@ -76,6 +118,7 @@ type DashboardConfig = {
   navLinks: { name?: string; items: NavLinkItem[] };
   aliases: AliasesConfig;
   apiBase: string;
+  map: MapConfig;
 };
 
 const defaultConfig: DashboardConfig = {
@@ -90,6 +133,7 @@ const defaultConfig: DashboardConfig = {
   navLinks: { items: [] },
   aliases: defaultAliases,
   apiBase: '',
+  map: defaultMapConfig,
 };
 
 const DashboardConfigContext = createContext<DashboardConfig>(defaultConfig);
@@ -106,6 +150,43 @@ function resolveDefaultLanguage(configLang: string): string {
 
 const getApiBase = (): string =>
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) || '';
+
+/** Keep the built-in defaults for anything the monitor does not send. */
+function mergeMapConfig(raw: Partial<MapConfig> | undefined): MapConfig {
+  if (!raw || typeof raw !== 'object') return defaultMapConfig;
+  const center = Array.isArray(raw.center) && raw.center.length === 2
+    ? ([Number(raw.center[0]), Number(raw.center[1])] as [number, number])
+    : defaultMapConfig.center;
+  const overrides: Record<string, [number, number]> = {};
+  for (const [peerId, value] of Object.entries(raw.overrides ?? {})) {
+    if (Array.isArray(value) && value.length === 2) {
+      const lat = Number(value[0]);
+      const lon = Number(value[1]);
+      if (Number.isFinite(lat) && Number.isFinite(lon)) overrides[String(peerId)] = [lat, lon];
+    }
+  }
+  const precision = (value: unknown, fallback: number | null): number | null => {
+    if (value === null) return null;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+  };
+  return {
+    enabled: raw.enabled ?? defaultMapConfig.enabled,
+    tileUrl: raw.tileUrl || defaultMapConfig.tileUrl,
+    tileUrlDark: raw.tileUrlDark ?? defaultMapConfig.tileUrlDark,
+    attribution: raw.attribution || defaultMapConfig.attribution,
+    maxZoom: Number(raw.maxZoom) || defaultMapConfig.maxZoom,
+    center: Number.isFinite(center[0]) && Number.isFinite(center[1]) ? center : defaultMapConfig.center,
+    zoom: Number(raw.zoom) || defaultMapConfig.zoom,
+    hotspotPrecision: precision(raw.hotspotPrecision, defaultMapConfig.hotspotPrecision),
+    repeaterPrecision: precision(raw.repeaterPrecision, defaultMapConfig.repeaterPrecision),
+    approxByCountry: raw.approxByCountry ?? defaultMapConfig.approxByCountry,
+    gpsUrl: raw.gpsUrl || '',
+    gpsLabel: raw.gpsLabel || '',
+    gpsRefreshSec: Number(raw.gpsRefreshSec) || defaultMapConfig.gpsRefreshSec,
+    overrides,
+  };
+}
 
 /**
  * Dashboard config flow:
@@ -141,6 +222,7 @@ export function DashboardConfigProvider({ children }: { children: React.ReactNod
           footer?: NavLinkItem[];
           news?: NavLinkItem[];
           navLinks?: { name?: string; items?: NavLinkItem[] };
+          map?: Partial<MapConfig>;
         }) => {
         const rawConfigLang = (data.language ?? getDefaultLanguage()).split(/[-_]/)[0]?.toLowerCase() || 'en';
         const resolvedLang = resolveDefaultLanguage(rawConfigLang);
@@ -168,6 +250,7 @@ export function DashboardConfigProvider({ children }: { children: React.ReactNod
           navLinks: { name: nav.name ?? '', items: Array.isArray(nav.items) ? nav.items : [] },
           apiBase,
           aliases: defaultAliases,
+          map: mergeMapConfig(data.map),
         });
         const cookieLang = getLanguageCookie();
         if (cookieLang && SUPPORTED_LANGUAGE_CODES.includes(cookieLang as (typeof SUPPORTED_LANGUAGE_CODES)[number])) {

@@ -69,6 +69,11 @@ _PEER_JSON_TO_LEGACY: tuple[tuple[str, str], ...] = (
     ("software_id", "SOFTWARE_ID"),
     ("colorcode", "COLORCODE"),
     ("tx_power", "TX_POWER"),
+    # Coordinates the peer sent in its RPTC login; used by the map page. Servers
+    # that do not report them simply leave the peer off the map.
+    ("latitude", "LATITUDE"),
+    ("longitude", "LONGITUDE"),
+    ("height", "HEIGHT"),
 )
 
 _BYTE_PEER_FIELDS = frozenset({"RX_FREQ", "TX_FREQ", "SLOTS"})
