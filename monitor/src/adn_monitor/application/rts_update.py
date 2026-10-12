@@ -45,6 +45,7 @@ from .tgstats import (
     _peer_single_mode,
     clear_peer_ua_sessions,
     clear_voice_ts_for_destination,
+    clear_voice_ts_for_stream,
     lookup_ua_timeout_for_peer,
     register_ua_session,
 )
@@ -435,6 +436,7 @@ def rts_update_impl(
                     peer_ts["TG"] = tg_short
                     peer_ts["TRX"] = crxstatus
                     peer_ts["ANNOUNCEMENT"] = is_announcement
+                    peer_ts["STREAM"] = stream_id
                 elif action == "END":
                     if (
                         trx == "TX"
@@ -479,9 +481,12 @@ def rts_update_impl(
                             peer_ts["TG"] = tg_short
                             peer_ts["TRX"] = "TX"
                             peer_ts["ANNOUNCEMENT"] = is_announcement
+                            peer_ts["STREAM"] = stream_id
                     elif action == "END":
                         if not _peer_slot_busy_other_tg(peer_ts, destination):
                             clear_voice_ts_for_destination(src_peer_row, destination)
+    if action == "END" and call_type in ("GROUP VOICE", "PRIVATE VOICE"):
+        clear_voice_ts_for_stream(ctable, stream_id)
 
     server_mode = getattr(state, "server_mode", ServerMode.LEGACY)
     if system in ctable.get("OPENBRIDGES", {}):
