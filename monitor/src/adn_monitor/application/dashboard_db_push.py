@@ -84,7 +84,9 @@ class DashboardDbPusher:
             return
         payload = {
             "lastheard": lh_rows,
-            "ctable": ws_ctable_views.ctable_for_main(state.CTABLE),
+            "ctable": ws_ctable_views.ctable_for_main(
+                state.CTABLE, empty_masters=bool(conf_global.get("EMPTY_MASTERS", False))
+            ),
         }
         msg = "i" + json.dumps(payload, default=str)
         self._broadcast.broadcast(msg, "main")

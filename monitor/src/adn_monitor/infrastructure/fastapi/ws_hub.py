@@ -153,7 +153,9 @@ class WsHub(BroadcastPort):
             lh_rows = lastheard_rows(rows, conf_global)
             payload = {
                 "lastheard": lh_rows,
-                "ctable": ws_ctable_views.ctable_for_main(state.CTABLE),
+                "ctable": ws_ctable_views.ctable_for_main(
+                    state.CTABLE, empty_masters=bool(conf_global.get("EMPTY_MASTERS", False))
+                ),
             }
             _send("i" + json.dumps(payload, default=str))
 

@@ -25,6 +25,7 @@
 
 from __future__ import annotations
 
+import functools
 import re
 import time
 
@@ -62,9 +63,16 @@ def parse_options_to_static(options_str: str | None) -> dict:
     Supports classic (``TS1=262,110;TS2=730;``) and OpenSpot / DMR+
     (``TS1_1=262;TS1_2=110;TS2_1=714;``) formats. Unknown keys are ignored.
     """
-    out: dict = {"TS1_STATIC": [], "TS2_STATIC": []}
     if not options_str or not isinstance(options_str, str):
-        return out
+        return {"TS1_STATIC": [], "TS2_STATIC": []}
+    # build_tgstats parses every peer's OPTIONS several times per voice event; they rarely change.
+    return {key: list(value) if isinstance(value, tuple) else value for key, value in _parsed_options(options_str)}
+
+
+@functools.lru_cache(maxsize=4096)
+def _parsed_options(options_str: str) -> tuple:
+    """Immutable parse of one OPTIONS text, so the cache can never be modified by a caller."""
+    out: dict = {"TS1_STATIC": [], "TS2_STATIC": []}
     text = re.sub(r"['\"]", "", options_str.strip())
     kv: dict[str, str] = {}
     for part in text.split(";"):
@@ -100,7 +108,7 @@ def parse_options_to_static(options_str: str | None) -> dict:
             pass
     if "SINGLE" in kv:
         out["SINGLE"] = kv["SINGLE"].strip()
-    return out
+    return tuple((key, tuple(value) if isinstance(value, list) else value) for key, value in out.items())
 
 
 def _masters_for_bridge_system(ctable: dict, sys_name: str) -> list[str]:
