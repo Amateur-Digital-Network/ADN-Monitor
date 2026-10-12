@@ -41,7 +41,10 @@ def _dict_keys_str(obj: Any) -> Any:
 
 
 def _fingerprint_dumps(payload: Any) -> str:
-    return json.dumps(_dict_keys_str(payload), sort_keys=True, default=str)
+    try:
+        return json.dumps(payload, sort_keys=True, default=str)
+    except TypeError:  # a dict mixes int and str keys: stringify them (one full walk, the slow path)
+        return json.dumps(_dict_keys_str(payload), sort_keys=True, default=str)
 
 
 def _peer_ts_semantic(ent: Any) -> Any:
@@ -64,7 +67,7 @@ def _main_ctable_semantic(ctable: dict[str, Any]) -> dict[str, Any]:
     """Semantic main-dashboard CTABLE view without deepcopy (ignore TIMEOUT churn)."""
     masters_out: dict[str, Any] = {}
     for sn, master in (ctable.get("MASTERS") or {}).items():
-        if not isinstance(master, dict):
+        if not isinstance(master, dict) or not master.get("PEERS"):
             continue
         peers_out: dict[str, Any] = {}
         for pid, peer in (master.get("PEERS") or {}).items():
@@ -103,17 +106,17 @@ def ctable_for_lnksys(ctable: dict[str, Any], *, empty_masters: bool = False) ->
     When ``empty_masters`` is false (default / ``EMPTY_MASTERS: false``), omit masters
     with no connected peers so WebSocket payloads stay slim.
     """
-    masters = ctable.get("MASTERS", {})
-    if not empty_masters:
-        masters = {
-            name: data
-            for name, data in masters.items()
-            if isinstance(data, dict) and data.get("PEERS")
-        }
     return {
-        "MASTERS": masters,
+        "MASTERS": _masters(ctable, empty_masters),
         "PEERS": ctable.get("PEERS", {}),
     }
+
+
+def _masters(ctable: dict[str, Any], empty_masters: bool) -> dict[str, Any]:
+    masters = ctable.get("MASTERS", {})
+    if empty_masters:
+        return masters
+    return {name: data for name, data in masters.items() if isinstance(data, dict) and data.get("PEERS")}
 
 
 def ctable_for_opb(ctable: dict[str, Any]) -> dict[str, Any]:
@@ -121,10 +124,15 @@ def ctable_for_opb(ctable: dict[str, Any]) -> dict[str, Any]:
     return {"OPENBRIDGES": ctable.get("OPENBRIDGES", {})}
 
 
-def ctable_for_main(ctable: dict[str, Any]) -> dict[str, Any]:
-    """Dashboard / ActiveQsoBox: masters, XLX/homebrew peers, openbridge streams."""
+def ctable_for_main(ctable: dict[str, Any], *, empty_masters: bool = False) -> dict[str, Any]:
+    """Dashboard / ActiveQsoBox: masters, XLX/homebrew peers, openbridge streams.
+
+    Like ``ctable_for_lnksys``, masters with no peers are left out unless ``EMPTY_MASTERS``:
+    an inject-only server reports one per MAX_PEERS slot, a third of each message, sent on
+    every voice event.
+    """
     return {
-        "MASTERS": ctable.get("MASTERS", {}),
+        "MASTERS": _masters(ctable, empty_masters),
         "PEERS": ctable.get("PEERS", {}),
         "OPENBRIDGES": ctable.get("OPENBRIDGES", {}),
     }
