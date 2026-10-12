@@ -279,6 +279,21 @@ def clear_peer_voice_ts_slot(peer_ts: dict) -> None:
     peer_ts["TS"] = False
     peer_ts["TYPE"] = peer_ts["SUB"] = peer_ts["CALL"] = ""
     peer_ts["SRC"] = peer_ts["DEST"] = peer_ts["TG"] = peer_ts["TRX"] = ""
+    peer_ts.pop("STREAM", None)
+
+
+def clear_voice_ts_for_stream(ctable: dict, stream_id: str) -> None:
+    """Clear every master chip still showing this stream, whatever SYSTEM-N or peer its END named.
+
+    A stream ends once: an END whose system or peer does not match its START used to leave
+    the chip lit until the next END on that TG.
+    """
+    for master in (ctable.get("MASTERS") or {}).values():
+        for peer_row in (master.get("PEERS") or {}).values() if isinstance(master, dict) else ():
+            for slot in (1, 2):
+                peer_ts = peer_row.get(slot) if isinstance(peer_row, dict) else None
+                if isinstance(peer_ts, dict) and peer_ts.get("STREAM") == stream_id:
+                    clear_peer_voice_ts_slot(peer_ts)
 
 
 def clear_voice_ts_for_destination(peer_row: dict, destination: int) -> None:

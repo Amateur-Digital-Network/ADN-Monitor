@@ -126,11 +126,12 @@ class MonitorRuntime:
         interval = float(app_conf.get("FREQUENCY", 1))
         if interval > 0:
             self._safety_task = asyncio.create_task(self._safety_loop(interval))
+        # Also without a DB: it is what expires a chip whose END never arrived (clean_te).
+        self._memory_task = asyncio.create_task(self._memory_maintenance_loop(60.0))
         if self._db_ok:
             self._cleaning_task = asyncio.create_task(self._cleaning_loop(900.0))
             if self.config_global.get("TGC_INC"):
                 self._tgcount_task = asyncio.create_task(self._tgcount_loop(60.0))
-            self._memory_task = asyncio.create_task(self._memory_maintenance_loop(60.0))
         if self._peer_opts_repo is not None:
             self._peer_opts_task = asyncio.create_task(self._peer_options_loop(15.0))
         if self._alias_sync is not None:
@@ -418,8 +419,6 @@ class MonitorRuntime:
             self._cleaning_task = asyncio.create_task(self._cleaning_loop(900.0))
         if self.config_global.get("TGC_INC") and self._tgcount_task is None:
             self._tgcount_task = asyncio.create_task(self._tgcount_loop(60.0))
-        if self._memory_task is None:
-            self._memory_task = asyncio.create_task(self._memory_maintenance_loop(60.0))
         if self._peer_opts_repo is not None and self._peer_opts_task is None:
             self._peer_opts_task = asyncio.create_task(self._peer_options_loop(15.0))
         if self._alias_sync is not None and self._alias_files_task is None:
@@ -429,7 +428,6 @@ class MonitorRuntime:
         for task in (
             self._cleaning_task,
             self._tgcount_task,
-            self._memory_task,
             self._peer_opts_task,
             self._alias_files_task,
         ):
@@ -441,7 +439,6 @@ class MonitorRuntime:
                     pass
         self._cleaning_task = None
         self._tgcount_task = None
-        self._memory_task = None
         self._peer_opts_task = None
         self._alias_files_task = None
 
