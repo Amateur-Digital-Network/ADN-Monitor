@@ -40,6 +40,12 @@ export type QsoOrigin = {
 /** ``bridge``: an OpenBridge stream with no subscriber behind it, placed on the country of its TG. */
 export type QsoCaller = { call: string; dmrId: string; tg: string; bridge: boolean };
 
+/** The country prefix of the caller's ID; for an ID outside every country range (services, 200xxxx), its TG's. */
+function callerCountry(dmrId: string, tg: string): string {
+  const prefix = dmrId.slice(0, 3);
+  return COUNTRY_CENTROIDS[prefix] ? prefix : tg.slice(0, 3);
+}
+
 function tgNumber(text: string): string {
   return /(\d+)\D*$/.exec(text.replace(/&nbsp;/g, ' '))?.[1] ?? '';
 }
@@ -52,7 +58,7 @@ export function activeQsoOrigins(ctable: Ctable | null | undefined): QsoOrigin[]
     const dmrId = subscriberId(ts?.SUB);
     if (!dmrId) return;
     const caller = { call: (ts?.CALL ?? '').trim() || dmrId, dmrId, tg: tgNumber(ts?.TG || ts?.DEST || ''), bridge: false };
-    callers.set(`${dmrId}/${caller.tg}`, { mcc: dmrId.slice(0, 3), caller });
+    callers.set(`${dmrId}/${caller.tg}`, { mcc: callerCountry(dmrId, caller.tg), caller });
   };
 
   for (const master of Object.values(ctable?.MASTERS ?? {})) {
@@ -75,7 +81,7 @@ export function activeQsoOrigins(ctable: Ctable | null | undefined): QsoOrigin[]
       if (!call || call.toUpperCase() === 'BRIDGE') {
         if (tg) callers.set(`bridge/${tg}`, { mcc: tg.slice(0, 3), caller: { call: 'BRIDGE', dmrId, tg, bridge: true } });
       } else if (dmrId) {
-        callers.set(`${dmrId}/${tg}`, { mcc: dmrId.slice(0, 3), caller: { call, dmrId, tg, bridge: false } });
+        callers.set(`${dmrId}/${tg}`, { mcc: callerCountry(dmrId, tg), caller: { call, dmrId, tg, bridge: false } });
       }
     }
   }

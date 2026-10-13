@@ -17,17 +17,22 @@
  */
 
 /*
- * GENERATED FILE - do not edit by hand.
- * Regenerate with scripts/gen_country_centroids.py (see that file for sources).
- *
- * DMR ID prefix (first three digits, ITU mobile country code) -> approximate
- * country centroid. Used only as a fallback on the map page when a peer does
- * not report LATITUDE/LONGITUDE; such markers are drawn as "approximate".
+ * DMR ID prefix (first three digits) -> approximate country centroid: the ITU mobile
+ * country codes plus the extra RadioID ranges a country spans (US 310-329, Spain 215,
+ * Italy 223-224, ...), the ones whose image in public/img/flags is that country's flag.
+ * Places systems with no coordinates on the Linked Systems map and calls on the Home map.
  */
 
 export type CountryCentroid = { lat: number; lon: number; iso: string; name: string };
 
 export const COUNTRY_CENTROIDS: Record<string, CountryCentroid> = {
+  '102': { lat: 56.1304, lon: -106.3468, iso: 'CA', name: 'Canada' },
+  '110': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
+  '111': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
+  '112': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
+  '113': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
+  '114': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
+  '115': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
   '202': { lat: 39.0742, lon: 21.8243, iso: 'GR', name: 'Greece' },
   '204': { lat: 52.1326, lon: 5.2913, iso: 'NL', name: 'Netherlands' },
   '206': { lat: 50.5039, lon: 4.4699, iso: 'BE', name: 'Belgium' },
@@ -35,12 +40,15 @@ export const COUNTRY_CENTROIDS: Record<string, CountryCentroid> = {
   '212': { lat: 43.7503, lon: 7.4128, iso: 'MC', name: 'Monaco' },
   '213': { lat: 42.5462, lon: 1.6016, iso: 'AD', name: 'Andorra' },
   '214': { lat: 40.4637, lon: -3.7492, iso: 'ES', name: 'Spain' },
+  '215': { lat: 40.4637, lon: -3.7492, iso: 'ES', name: 'Spain' },
   '216': { lat: 47.1625, lon: 19.5033, iso: 'HU', name: 'Hungary' },
   '218': { lat: 43.9159, lon: 17.6791, iso: 'BA', name: 'Bosnia and Herzegovina' },
   '219': { lat: 45.1000, lon: 15.2000, iso: 'HR', name: 'Croatia' },
   '220': { lat: 44.0165, lon: 21.0059, iso: 'RS', name: 'Serbia' },
   '221': { lat: 42.6026, lon: 20.9030, iso: 'XK', name: 'Kosovo' },
   '222': { lat: 41.8719, lon: 12.5674, iso: 'IT', name: 'Italy' },
+  '223': { lat: 41.8719, lon: 12.5674, iso: 'IT', name: 'Italy' },
+  '224': { lat: 41.8719, lon: 12.5674, iso: 'IT', name: 'Italy' },
   '225': { lat: 41.9029, lon: 12.4534, iso: 'VA', name: 'Vatican City' },
   '226': { lat: 45.9432, lon: 24.9668, iso: 'RO', name: 'Romania' },
   '228': { lat: 46.8182, lon: 8.2275, iso: 'CH', name: 'Switzerland' },
@@ -49,6 +57,8 @@ export const COUNTRY_CENTROIDS: Record<string, CountryCentroid> = {
   '232': { lat: 47.5162, lon: 14.5501, iso: 'AT', name: 'Austria' },
   '234': { lat: 55.3781, lon: -3.4360, iso: 'GB', name: 'United Kingdom' },
   '235': { lat: 55.3781, lon: -3.4360, iso: 'GB', name: 'United Kingdom' },
+  '236': { lat: 55.3781, lon: -3.4360, iso: 'GB', name: 'United Kingdom' },
+  '237': { lat: 55.3781, lon: -3.4360, iso: 'GB', name: 'United Kingdom' },
   '238': { lat: 56.2639, lon: 9.5018, iso: 'DK', name: 'Denmark' },
   '240': { lat: 60.1282, lon: 18.6435, iso: 'SE', name: 'Sweden' },
   '242': { lat: 60.4720, lon: 8.4689, iso: 'NO', name: 'Norway' },
@@ -62,6 +72,9 @@ export const COUNTRY_CENTROIDS: Record<string, CountryCentroid> = {
   '259': { lat: 47.4116, lon: 28.3699, iso: 'MD', name: 'Moldova' },
   '260': { lat: 51.9194, lon: 19.1451, iso: 'PL', name: 'Poland' },
   '262': { lat: 51.1657, lon: 10.4515, iso: 'DE', name: 'Germany' },
+  '263': { lat: 51.1657, lon: 10.4515, iso: 'DE', name: 'Germany' },
+  '264': { lat: 51.1657, lon: 10.4515, iso: 'DE', name: 'Germany' },
+  '265': { lat: 51.1657, lon: 10.4515, iso: 'DE', name: 'Germany' },
   '266': { lat: 36.1377, lon: -5.3454, iso: 'GI', name: 'Gibraltar' },
   '268': { lat: 39.3999, lon: -8.2245, iso: 'PT', name: 'Portugal' },
   '270': { lat: 49.8153, lon: 6.1296, iso: 'LU', name: 'Luxembourg' },
@@ -94,6 +107,16 @@ export const COUNTRY_CENTROIDS: Record<string, CountryCentroid> = {
   '317': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
   '318': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
   '319': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
+  '320': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
+  '321': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
+  '322': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
+  '323': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
+  '324': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
+  '325': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
+  '326': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
+  '327': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
+  '328': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
+  '329': { lat: 37.0902, lon: -95.7129, iso: 'US', name: 'United States' },
   '330': { lat: 18.2208, lon: -66.5901, iso: 'PR', name: 'Puerto Rico' },
   '334': { lat: 23.6345, lon: -102.5528, iso: 'MX', name: 'Mexico' },
   '338': { lat: 18.1096, lon: -77.2975, iso: 'JM', name: 'Jamaica' },
@@ -157,6 +180,7 @@ export const COUNTRY_CENTROIDS: Record<string, CountryCentroid> = {
   '456': { lat: 12.5657, lon: 104.9910, iso: 'KH', name: 'Cambodia' },
   '457': { lat: 19.8563, lon: 102.4955, iso: 'LA', name: 'Laos' },
   '460': { lat: 35.8617, lon: 104.1954, iso: 'CN', name: 'China' },
+  '461': { lat: 35.8617, lon: 104.1954, iso: 'CN', name: 'China' },
   '466': { lat: 23.6978, lon: 120.9605, iso: 'TW', name: 'Taiwan' },
   '467': { lat: 40.3399, lon: 127.5101, iso: 'KP', name: 'North Korea' },
   '470': { lat: 23.6850, lon: 90.3563, iso: 'BD', name: 'Bangladesh' },

@@ -90,6 +90,25 @@ describe('activeQsoOrigins', () => {
     expect(origins[0]).toMatchObject({ iso: 'US', callers: [{ call: 'KB8PMY' }, { call: 'KA1VSC' }] });
   });
 
+  it('places a caller on the extra RadioID ranges of a country, else on the TG country', () => {
+    const ctable: Ctable = {
+      OPENBRIDGES: {
+        OBP: {
+          STREAMS: {
+            a: ['RX', 'EA3JLA', '91', 0, 2150477],
+            b: ['RX', 'IU8VYH', '91', 0, 2232562],
+            c: ['RX', '2000999', '268', 0, 2000999],
+          },
+        },
+      },
+    };
+    expect(activeQsoOrigins(ctable).map(({ iso, callers }) => [iso, callers[0].call])).toEqual([
+      ['ES', 'EA3JLA'],
+      ['IT', 'IU8VYH'],
+      ['PT', '2000999'],
+    ]);
+  });
+
   it('counts a caller heard on two systems once', () => {
     const ctable: Ctable = {
       PEERS: { 'XLX-1': { 1: rx('Rodrigo (7300444)', 'CE5RPY') } },
