@@ -22,6 +22,7 @@
  * Original works and this derivative are under GPLv3.
  */
 
+import { lazy, Suspense, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -42,6 +43,12 @@ import { useWebSocketGroup } from '../hooks/useWebSocket';
 import QrzLink, { isCallsignLike } from '../components/QrzLink';
 import ActiveQsoBox, { type Ctable, type PeerEntry } from '../components/ActiveQsoBox';
 import { TableCaptionTitle } from '../components/TableCaptionTitle';
+import { useDashboardConfig } from '../context/DashboardConfigContext';
+import { activeQsoOrigins } from '../utils/qsoOrigins';
+
+import MapFrame from '../components/map/MapFrame';
+
+const QsoOriginMap = lazy(() => import('../components/map/QsoOriginMap'));
 
 type LastHeardRow = {
   date: string;
@@ -220,6 +227,8 @@ export default function Dashboard() {
   const payload = data as MainPayload | null;
   const rows = payload?.lastheard ?? [];
   const ctable = payload?.ctable;
+  const { map: mapConfig } = useDashboardConfig();
+  const origins = useMemo(() => activeQsoOrigins(ctable), [ctable]);
 
   return (
     <Box>
@@ -227,6 +236,15 @@ export default function Dashboard() {
         <Typography color="text.secondary" sx={{ py: 2 }}>{t('pre_wait')}</Typography>
       )}
       {data != null ? <ActiveQsoBox ctable={ctable ?? undefined} /> : null}
+      {data != null && mapConfig.enabled ? (
+        <Box sx={{ mb: 2 }} aria-label={t('map_qso_origins', { defaultValue: 'Where the calls on air come from' })}>
+          <MapFrame height={{ xs: 280, sm: 420, md: 520 }}>
+            <Suspense fallback={null}>
+              <QsoOriginMap origins={origins} config={mapConfig} />
+            </Suspense>
+          </MapFrame>
+        </Box>
+      ) : null}
       {rows.length > 0 && (
         <TableContainer
           component={Paper}

@@ -22,16 +22,22 @@
  * Original works and this derivative are under GPLv3.
  */
 
-/** Leaflet canvas for the map page: tiles follow the theme, markers are reconciled in place. */
+/** Leaflet map for Linked Systems: the background follows MAP.STYLE and the theme, nearby systems are clustered, markers are reconciled in place. */
 
 import { useEffect, useMemo, useRef } from 'react';
-import { Box, GlobalStyles, useTheme } from '@mui/material';
+import { Box, useTheme } from '@mui/material';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
 
 import type { MapConfig } from '../../context/DashboardConfigContext';
 import type { GpsPoint, PeerPoint } from '../../utils/mapPoints';
-import { MARKER_COLORS, type MapLabels } from './markerStyles';
+import { centroidForDmrId } from '../../utils/countryCentroids';
+import { addBasemap, showInitialView, type Basemap } from './basemap';
+import MapGlobalStyles from './MapGlobalStyles';
+import { clusterIcon, dotIcon, serverIcon, towerIcon } from './markerIcons';
+import { escapeHtml, MARKER_COLORS, type MapLabels } from './markerStyles';
 
 type LiveMapProps = {
   peers: PeerPoint[];
@@ -45,14 +51,6 @@ type LiveMapProps = {
   onSelect?: (point: PeerPoint) => void;
 };
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 function qrzLink(callsign: string, label: string): string {
   const call = callsign.split(/[\s,]/)[0]?.toUpperCase() ?? '';
   if (!/^[A-Z0-9]{3,}(\/[A-Z0-9]+)?$/.test(call)) return '';
@@ -64,6 +62,10 @@ function row(label: string, value: string): string {
   return `<div class="adn-pop-row"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`;
 }
 
+function onAirText(point: PeerPoint): string {
+  return [point.activeCall, point.activeId, point.activeTg].filter(Boolean).join(' · ');
+}
+
 function peerPopup(point: PeerPoint, labels: MapLabels): string {
   const kindLabel = labels[point.kind];
   const title = point.callsign || point.peerId;
@@ -72,9 +74,7 @@ function peerPopup(point: PeerPoint, labels: MapLabels): string {
   return [
     `<div class="adn-pop-title">${escapeHtml(title)} <span>${escapeHtml(point.peerId)}</span></div>`,
     `<div class="adn-pop-kind">${escapeHtml(kindLabel)}${point.source !== 'reported' ? ` · ${escapeHtml(labels.approx)}` : ''}</div>`,
-    point.active
-      ? `<div class="adn-pop-air">${escapeHtml(labels.onAir)}: ${escapeHtml(point.activeCall || '')} ${escapeHtml(point.activeTg || '')}</div>`
-      : '',
+    point.active ? `<div class="adn-pop-air">${escapeHtml(labels.onAir)}: ${escapeHtml(onAirText(point))}</div>` : '',
     row(labels.location, point.location),
     row(labels.system, point.system),
     row('RX / TX', freq),
@@ -92,18 +92,26 @@ function gpsPopup(point: GpsPoint, labels: MapLabels): string {
   ].join('');
 }
 
-type MarkerEntry = { marker: L.CircleMarker; signature: string };
+type MarkerEntry = { marker: L.Marker; layer: L.LayerGroup; signature: string };
 
 /** Add, move or drop markers so open popups and the current view survive updates. */
 function reconcile<T extends { key: string; lat: number; lon: number }>(
-  layer: L.LayerGroup,
+  layerOf: (point: T) => L.LayerGroup,
   store: Map<string, MarkerEntry>,
   points: T[],
   signatureOf: (point: T) => string,
-  styleOf: (point: T) => L.CircleMarkerOptions,
+  iconOf: (point: T) => L.DivIcon,
   popupOf: (point: T) => string,
   onClick?: (point: T) => void,
+  raisedOf?: (point: T) => boolean,
 ): void {
+  // Hover shows the details; a click pins them in a popup (phones, and the QRZ link).
+  const details = (marker: L.Marker, point: T) => {
+    const html = popupOf(point);
+    marker.setPopupContent(html);
+    marker.setTooltipContent(html);
+    marker.setZIndexOffset(raisedOf?.(point) ? 1000 : 0);
+  };
   const seen = new Set<string>();
   for (const point of points) {
     seen.add(point.key);
@@ -111,21 +119,33 @@ function reconcile<T extends { key: string; lat: number; lon: number }>(
     const existing = store.get(point.key);
     if (existing) {
       if (existing.signature === signature) continue;
-      existing.marker.setLatLng([point.lat, point.lon]);
-      existing.marker.setStyle(styleOf(point));
-      existing.marker.setPopupContent(popupOf(point));
+      const layer = layerOf(point);
+      const { lat, lng } = existing.marker.getLatLng();
+      // Clusters are built on add: a marker that moves or changes layer is re-added, others keep their open popup.
+      if (layer !== existing.layer || lat !== point.lat || lng !== point.lon) {
+        existing.layer.removeLayer(existing.marker);
+        existing.marker.setLatLng([point.lat, point.lon]);
+        layer.addLayer(existing.marker);
+        existing.layer = layer;
+      }
+      existing.marker.setIcon(iconOf(point));
+      details(existing.marker, point);
       existing.signature = signature;
       continue;
     }
-    const marker = L.circleMarker([point.lat, point.lon], styleOf(point));
-    marker.bindPopup(popupOf(point), { maxWidth: 260, className: 'adn-popup' });
+    const marker = L.marker([point.lat, point.lon], { icon: iconOf(point), keyboard: false });
+    marker.bindPopup('', { maxWidth: 260, className: 'adn-popup' });
+    marker.bindTooltip('', { direction: 'top', className: 'adn-tooltip adn-details' });
+    marker.on('popupopen', () => marker.closeTooltip());
     if (onClick) marker.on('click', () => onClick(point));
-    marker.addTo(layer);
-    store.set(point.key, { marker, signature });
+    const layer = layerOf(point);
+    details(marker, point);
+    layer.addLayer(marker);
+    store.set(point.key, { marker, layer, signature });
   }
   for (const [key, entry] of store) {
     if (seen.has(key)) continue;
-    layer.removeLayer(entry.marker);
+    entry.layer.removeLayer(entry.marker);
     store.delete(key);
   }
 }
@@ -143,8 +163,8 @@ export default function LiveMap({
   const dark = theme.palette.mode === 'dark';
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const tileRef = useRef<L.TileLayer | null>(null);
-  const layersRef = useRef<{ peers: L.LayerGroup; gps: L.LayerGroup } | null>(null);
+  const basemapRef = useRef<Basemap | null>(null);
+  const layersRef = useRef<{ peers: L.MarkerClusterGroup; onAir: L.LayerGroup; gps: L.LayerGroup } | null>(null);
   const storesRef = useRef({
     peers: new Map<string, MarkerEntry>(),
     gps: new Map<string, MarkerEntry>(),
@@ -154,43 +174,30 @@ export default function LiveMap({
   // Map instance: created once, kept across data updates.
   useEffect(() => {
     if (mapRef.current || !containerRef.current) return undefined;
-    const saved = (() => {
-      try {
-        const raw = localStorage.getItem('mapView');
-        if (!raw) return null;
-        const parsed = JSON.parse(raw) as { lat?: number; lon?: number; zoom?: number };
-        if (!Number.isFinite(parsed.lat) || !Number.isFinite(parsed.lon)) return null;
-        return parsed;
-      } catch {
-        return null;
-      }
-    })();
-
     const map = L.map(containerRef.current, {
-      center: saved ? [saved.lat as number, saved.lon as number] : config.center,
-      zoom: saved?.zoom ?? config.zoom,
+      // The vector style has no tile layer to cap the zoom.
+      maxZoom: config.maxZoom,
+      // Fitting the world to the box needs fractional zoom levels.
+      zoomSnap: 0.25,
       preferCanvas: true,
       worldCopyJump: true,
       zoomControl: true,
       attributionControl: true,
     });
+    showInitialView(map, config);
     mapRef.current = map;
     layersRef.current = {
-      peers: L.layerGroup().addTo(map),
+      // Same-spot systems (country fallback, one town) fan out on click so every one can be reached.
+      peers: L.markerClusterGroup({
+        maxClusterRadius: 36,
+        showCoverageOnHover: false,
+        spiderfyOnMaxZoom: true,
+        iconCreateFunction: (cluster) => clusterIcon(cluster.getChildCount()),
+      }).addTo(map),
+      // Systems on air stay out of the clusters so their label is always on screen.
+      onAir: L.layerGroup().addTo(map),
       gps: L.layerGroup().addTo(map),
     };
-    map.on('moveend', () => {
-      const center = map.getCenter();
-      try {
-        localStorage.setItem(
-          'mapView',
-          JSON.stringify({ lat: center.lat, lon: center.lng, zoom: map.getZoom() }),
-        );
-      } catch {
-        /* private mode: view is simply not remembered */
-      }
-    });
-
     const observer = new ResizeObserver(() => map.invalidateSize());
     observer.observe(containerRef.current);
 
@@ -198,7 +205,7 @@ export default function LiveMap({
       observer.disconnect();
       map.remove();
       mapRef.current = null;
-      tileRef.current = null;
+      basemapRef.current = null;
       layersRef.current = null;
       storesRef.current = {
         peers: new Map<string, MarkerEntry>(),
@@ -209,33 +216,45 @@ export default function LiveMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Tiles follow the light/dark theme. Without a dark tile URL the light tiles
-  // are darkened with a CSS filter, so the dark theme needs no second provider.
-  const filterTiles = dark && !config.tileUrlDark;
+  // Countries where one of the shown systems is on air, by the country of its DMR ID.
+  const liveCountries = useMemo(() => {
+    const isos = new Set<string>();
+    for (const point of peers) {
+      const iso = point.active ? centroidForDmrId(point.peerId)?.iso : undefined;
+      if (iso) isos.add(iso);
+    }
+    return isos;
+  }, [peers]);
+  const liveCountriesRef = useRef(liveCountries);
+  liveCountriesRef.current = liveCountries;
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
-    if (tileRef.current) map.removeLayer(tileRef.current);
-    tileRef.current = L.tileLayer(dark && config.tileUrlDark ? config.tileUrlDark : config.tileUrl, {
-      attribution: config.attribution,
-      maxZoom: config.maxZoom,
-    }).addTo(map);
-  }, [dark, config.tileUrl, config.tileUrlDark, config.attribution, config.maxZoom]);
+    if (!map) return undefined;
+    const basemap = addBasemap(map, config, dark);
+    basemap.highlight(liveCountriesRef.current);
+    basemapRef.current = basemap;
+    return () => {
+      basemap.remove();
+      basemapRef.current = null;
+    };
+    // Only the fields that change the background rebuild it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dark, config.style, config.tileUrl, config.tileUrlDark, config.attribution, config.maxZoom]);
 
-  const peerStyle = useMemo(
-    () => (point: PeerPoint): L.CircleMarkerOptions => {
-      const approx = point.source !== 'reported';
+  useEffect(() => {
+    basemapRef.current?.highlight(liveCountries);
+  }, [liveCountries]);
+
+  const peerIcon = useMemo(
+    () => (point: PeerPoint): L.DivIcon => {
       const color = point.active ? MARKER_COLORS.active : MARKER_COLORS[point.kind];
-      return {
-        radius: point.active ? 10 : point.kind === 'repeater' ? 7 : 6,
-        color,
-        weight: point.active ? 3 : 2,
-        opacity: approx ? 0.55 : 0.95,
-        fillColor: color,
-        fillOpacity: point.active ? 0.55 : approx ? 0.15 : 0.35,
-        dashArray: approx ? '3 4' : undefined,
-      };
+      const faded = !point.active && point.source !== 'reported';
+      // On air the label names who is talking; otherwise the system's own callsign.
+      const label = point.active ? onAirText(point) : point.callsign || point.peerId;
+      if (point.kind === 'bridge') return serverIcon(color, point.active ? 18 : 14, label, point.active, faded);
+      const height = (point.kind === 'repeater' ? 30 : 24) + (point.active ? 6 : 0);
+      return towerIcon(color, height, label, point.active, faded);
     },
     [],
   );
@@ -244,33 +263,27 @@ export default function LiveMap({
     const layers = layersRef.current;
     if (!layers) return;
     reconcile(
-      layers.peers,
+      (point) => (point.active ? layers.onAir : layers.peers),
       storesRef.current.peers,
       peers,
       (point) =>
-        `${point.lat},${point.lon},${point.active}${point.activeRx}${point.activeCall}${point.activeTg}${point.connected}`,
-      peerStyle,
+        `${point.lat},${point.lon},${point.callsign},${point.active}${point.activeCall}${point.activeId}${point.activeTg}${point.connected}`,
+      peerIcon,
       (point) => peerPopup(point, labels),
       onSelect,
+      (point) => point.active,
     );
-  }, [peers, peerStyle, labels, onSelect]);
+  }, [peers, peerIcon, labels, onSelect]);
 
   useEffect(() => {
     const layers = layersRef.current;
     if (!layers) return;
     reconcile(
-      layers.gps,
+      () => layers.gps,
       storesRef.current.gps,
       gps,
       (point) => `${point.lat},${point.lon},${point.comment}`,
-      () => ({
-        radius: 6,
-        color: MARKER_COLORS.gps,
-        weight: 2,
-        opacity: 0.95,
-        fillColor: MARKER_COLORS.gps,
-        fillOpacity: 0.4,
-      }),
+      () => dotIcon(MARKER_COLORS.gps, 12),
       (point) => gpsPopup(point, labels),
     );
   }, [gps, labels]);
@@ -284,7 +297,8 @@ export default function LiveMap({
       ...gps.map((p) => [p.lat, p.lon] as L.LatLngExpression),
     ];
     if (coords.length === 0) return;
-    map.fitBounds(L.latLngBounds(coords).pad(0.15), { animate: true });
+    // A lone system (or several in one town) would otherwise land at street level.
+    map.fitBounds(L.latLngBounds(coords).pad(0.15), { animate: true, maxZoom: 10 });
     // Only the explicit fit request drives this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitSignal]);
@@ -293,7 +307,7 @@ export default function LiveMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !follow) return;
-    const active = peers.find((point) => point.activeRx) ?? peers.find((point) => point.active);
+    const active = peers.find((point) => point.active);
     if (!active) {
       followedRef.current = '';
       return;
@@ -305,61 +319,8 @@ export default function LiveMap({
 
   return (
     <>
-      <GlobalStyles
-        styles={{
-          '.adn-map-dark .leaflet-tile-pane': {
-            filter: 'invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.7)',
-          },
-          '.leaflet-container': {
-            width: '100%',
-            height: '100%',
-            background: dark ? '#0b1120' : '#e8eef3',
-            fontFamily: theme.typography.fontFamily,
-          },
-          '.adn-popup .leaflet-popup-content-wrapper': {
-            background: theme.palette.background.paper,
-            color: theme.palette.text.primary,
-            borderRadius: 12,
-            boxShadow: '0 6px 24px rgba(0,0,0,0.25)',
-          },
-          '.adn-popup .leaflet-popup-tip': { background: theme.palette.background.paper },
-          '.adn-popup .leaflet-popup-content': { margin: '10px 12px', lineHeight: 1.45 },
-          '.adn-pop-title': { fontWeight: 700, fontSize: '0.95rem' },
-          '.adn-pop-title span': { color: theme.palette.text.secondary, fontWeight: 400, fontSize: '0.8rem' },
-          '.adn-pop-kind': { color: theme.palette.text.secondary, fontSize: '0.75rem', marginBottom: 4 },
-          '.adn-pop-air': {
-            color: theme.palette.error.main,
-            fontWeight: 600,
-            fontSize: '0.8rem',
-            marginBottom: 4,
-          },
-          '.adn-pop-row': {
-            display: 'flex',
-            gap: 8,
-            justifyContent: 'space-between',
-            fontSize: '0.8rem',
-          },
-          '.adn-pop-row span': { color: theme.palette.text.secondary },
-          '.adn-pop-link a': { color: theme.palette.primary.main, fontSize: '0.8rem' },
-          '.leaflet-control-attribution': {
-            background: dark ? 'rgba(15,23,42,0.75)' : 'rgba(255,255,255,0.8)',
-            color: theme.palette.text.secondary,
-            fontSize: '0.65rem',
-          },
-          '.leaflet-control-attribution a': { color: theme.palette.primary.main },
-          '.leaflet-bar a': {
-            background: theme.palette.background.paper,
-            color: theme.palette.text.primary,
-            borderBottomColor: theme.palette.divider,
-          },
-          '.leaflet-bar a:hover': { background: theme.palette.action.hover },
-        }}
-      />
-      <Box
-        ref={containerRef}
-        className={filterTiles ? 'adn-map-dark' : undefined}
-        sx={{ width: '100%', height: '100%' }}
-      />
+      <MapGlobalStyles />
+      <Box ref={containerRef} sx={{ width: '100%', height: '100%' }} />
     </>
   );
 }

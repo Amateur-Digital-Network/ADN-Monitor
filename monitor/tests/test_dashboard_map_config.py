@@ -1,4 +1,4 @@
-"""MAP section of the dashboard config API (map page settings)."""
+"""MAP section of the dashboard config API (Home and Linked Systems maps)."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from adn_monitor.application.dashboard_config import build_dashboard_config
 def test_map_defaults_when_section_missing():
     cfg = build_dashboard_config({"DASHBOARD": {"DASHTITLE": "ADN"}})["map"]
     assert cfg["enabled"] is True
+    assert cfg["zoom"] is None
     assert cfg["center"] == [20.0, 0.0]
     # Hotspots are somebody's home: coarsened unless the sysop says otherwise.
     assert cfg["hotspotPrecision"] == 2
@@ -22,7 +23,7 @@ def test_map_reads_top_level_section():
             "MAP": {
                 "ENABLED": False,
                 "CENTER": [42.5, 1.52],
-                "ZOOM": "8",
+                "ZOOM": "8.25",
                 "HOTSPOT_PRECISION": None,
                 "GPS_URL": "https://example.org/positions.json",
                 "GPS_REFRESH_SEC": "30",
@@ -32,7 +33,7 @@ def test_map_reads_top_level_section():
     )["map"]
     assert cfg["enabled"] is False
     assert cfg["center"] == [42.5, 1.52]
-    assert cfg["zoom"] == 8
+    assert cfg["zoom"] == 8.25
     assert cfg["hotspotPrecision"] is None
     assert cfg["gpsUrl"] == "https://example.org/positions.json"
     assert cfg["gpsRefreshSec"] == 30
@@ -41,9 +42,9 @@ def test_map_reads_top_level_section():
 
 def test_map_nested_under_dashboard_and_bad_values_fall_back():
     cfg = build_dashboard_config(
-        {"DASHBOARD": {"map": {"zoom": "not-a-number", "center": "nope", "approx_by_country": "no"}}}
+        {"DASHBOARD": {"map": {"zoom": "auto", "center": "nope", "approx_by_country": "no"}}}
     )["map"]
-    assert cfg["zoom"] == 2
+    assert cfg["zoom"] is None
     assert cfg["center"] == [20.0, 0.0]
     assert cfg["approxByCountry"] is False
 
@@ -60,3 +61,14 @@ def test_loader_keeps_top_level_map_section(tmp_path):
     result = load_config(str(yaml_path))
     config = result.value if hasattr(result, "value") else result
     assert build_dashboard_config(config)["map"]["zoom"] == 6
+
+
+def test_map_style_picks_a_known_skin_and_falls_back_to_tiles():
+    def style(value):
+        return build_dashboard_config({"DASHBOARD": {}, "MAP": {"STYLE": value}})["map"]["style"]
+
+    assert build_dashboard_config({"DASHBOARD": {}})["map"]["style"] == 1
+    assert style(2) == 2
+    assert style("2") == 2
+    assert style(7) == 1
+    assert style("vector") == 1

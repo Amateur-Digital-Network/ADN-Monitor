@@ -82,11 +82,10 @@ export type PeerPoint = {
   txFreq: string;
   colorcode: string;
   connected: string;
-  /** A call is passing through this system right now. */
+  /** Someone is transmitting through this system's RF side; systems only receiving are not marked. */
   active: boolean;
-  /** The call started on this system's RF side (it is the one being keyed). */
-  activeRx: boolean;
   activeCall: string;
+  activeId: string;
   activeTg: string;
 };
 
@@ -99,9 +98,6 @@ export type GpsPoint = {
 };
 
 const ZERO_ISLAND = 0.0005;
-/** Degrees of spread for the pseudo-random offset so peers sharing one country
- * centroid do not stack up on the same point. */
-const COUNTRY_JITTER_SPREAD_DEG = 1.1;
 
 /** Accept "41.1234", "41,1234", " -3.70 " and the N/S/E/W suffixes some radios send. */
 export function parseCoordinate(raw: unknown, max: number): number | null {
@@ -133,17 +129,6 @@ function isZeroIsland(lat: number, lon: number): boolean {
   return Math.abs(lat) < ZERO_ISLAND && Math.abs(lon) < ZERO_ISLAND;
 }
 
-/** Stable pseudo-random offset so peers sharing one centroid do not stack up. */
-function jitter(seed: string, spread: number): [number, number] {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) | 0;
-  }
-  const a = ((hash >>> 8) & 0xffff) / 0xffff - 0.5;
-  const b = ((hash >>> 20) & 0xfff) / 0xfff - 0.5;
-  return [a * spread, b * spread * 1.6];
-}
-
 export function peerKind(peerId: string, peer: PeerEntry): PointKind {
   const rx = String(peer.RX_FREQ ?? '');
   const tx = String(peer.TX_FREQ ?? '');
@@ -151,7 +136,7 @@ export function peerKind(peerId: string, peer: PeerEntry): PointKind {
   return peerId.length >= 7 ? 'hotspot' : 'repeater';
 }
 
-function tsActive(ts: TsEntry | undefined): boolean {
+export function tsActive(ts: TsEntry | undefined): boolean {
   if (!ts) return false;
   const value = ts.TS;
   if (value === true) return true;
@@ -160,6 +145,13 @@ function tsActive(ts: TsEntry | undefined): boolean {
 
 function getTs(peer: PeerEntry, tsNum: 1 | 2): TsEntry | undefined {
   return peer[tsNum] ?? (peer as Record<string, TsEntry | undefined>)[String(tsNum)];
+}
+
+const SUB_DMR_ID = /\((\d+)\)\s*$/;
+
+/** DMR ID of whoever is transmitting, from a slot's ``SUB`` ("Name (7300444)"). */
+export function subscriberId(sub: string | undefined): string {
+  return SUB_DMR_ID.exec(sub ?? '')?.[1] ?? '';
 }
 
 function cleanText(value: unknown): string {
@@ -181,7 +173,8 @@ function resolvePosition(
   }
   const lat = parseCoordinate(peer.LATITUDE, 90);
   const lon = parseCoordinate(peer.LONGITUDE, 180);
-  if (lat !== null && lon !== null && !isZeroIsland(lat, lon)) {
+  // A bridge has no radio site: whatever it puts in its login (mid-Atlantic, say) is not a place.
+  if (kind !== 'bridge' && lat !== null && lon !== null && !isZeroIsland(lat, lon)) {
     const decimals = kind === 'hotspot' ? config.hotspotPrecision : config.repeaterPrecision;
     return {
       lat: roundCoordinate(lat, decimals),
@@ -192,8 +185,8 @@ function resolvePosition(
   if (!allowApprox) return null;
   const centroid = centroidForDmrId(peerId);
   if (!centroid) return null;
-  const [dLat, dLon] = jitter(peerId, COUNTRY_JITTER_SPREAD_DEG);
-  return { lat: centroid.lat + dLat, lon: centroid.lon + dLon, source: 'country' };
+  // Systems sharing a centroid are grouped by the map's clustering, not scattered.
+  return { lat: centroid.lat, lon: centroid.lon, source: 'country' };
 }
 
 /** Markers for every connected peer (repeaters, hotspots and bridges/services). */
@@ -208,11 +201,9 @@ export function buildPeerPoints(
   const pushPeer = (system: string, peerId: string, peer: PeerEntry, kind: PointKind) => {
     const position = resolvePosition(peerId, peer, kind, config, allowApprox);
     if (!position) return;
-    const ts1 = getTs(peer, 1);
-    const ts2 = getTs(peer, 2);
-    const activeTs = [ts1, ts2].filter(tsActive);
-    const rxTs = activeTs.find((ts) => String(ts?.TRX ?? '').toUpperCase() === 'RX');
-    const shown = rxTs ?? activeTs[0];
+    const rxTs = [getTs(peer, 1), getTs(peer, 2)].find(
+      (ts) => tsActive(ts) && String(ts?.TRX ?? '').toUpperCase() === 'RX',
+    );
     points.push({
       key: `${system}/${peerId}`,
       peerId,
@@ -227,10 +218,10 @@ export function buildPeerPoints(
       txFreq: cleanText(peer.TX_FREQ),
       colorcode: cleanText(peer.COLORCODE),
       connected: cleanText(peer.CONNECTED),
-      active: activeTs.length > 0,
-      activeRx: Boolean(rxTs),
-      activeCall: cleanText(shown?.CALL || shown?.SUB),
-      activeTg: cleanText(shown?.TG || shown?.DEST),
+      active: Boolean(rxTs),
+      activeCall: cleanText(rxTs?.CALL || rxTs?.SUB),
+      activeId: subscriberId(rxTs?.SUB),
+      activeTg: cleanText(rxTs?.TG || rxTs?.DEST),
     });
   };
 
@@ -305,64 +296,6 @@ export function parseGpsFeed(data: unknown): GpsPoint[] {
         if (entry && typeof entry === 'object') pushRaw(entry as Record<string, unknown>, index);
       });
       return points;
-    }
-  }
-  return points;
-}
-
-/**
- * Calls arriving right now over OpenBridge, i.e. traffic from the rest of the
- * network. No system on the far side reports coordinates, so each call is
- * placed over the country of the transmitting DMR ID and drawn as approximate.
- */
-export function buildOpenBridgePoints(
-  ctable: Ctable | null | undefined,
-  allowApprox: boolean,
-  maxAgeSec = 120,
-): PeerPoint[] {
-  const points: PeerPoint[] = [];
-  if (!ctable?.OPENBRIDGES || !allowApprox) return points;
-  const nowSec = Date.now() / 1000;
-  const seen = new Set<string>();
-
-  for (const [system, bridge] of Object.entries(ctable.OPENBRIDGES)) {
-    for (const [streamId, entry] of Object.entries(bridge?.STREAMS ?? {})) {
-      if (!Array.isArray(entry) || entry.length < 3) continue;
-      const trx = String(entry[0] ?? '').toUpperCase();
-      // RX = the call is coming in from that bridge; TX is our own echo of it.
-      if (trx !== 'RX') continue;
-      const callsign = cleanText(entry[1]);
-      const tg = cleanText(entry[2]);
-      const dmrId = cleanText(entry.length >= 5 ? entry[4] : '');
-      // Started-at stamp: drop streams whose END never arrived. A clock skew
-      // between server and browser only shows them for longer, never less.
-      const startedAt = Number(entry[3]);
-      if (Number.isFinite(startedAt) && startedAt > 0 && nowSec - startedAt > maxAgeSec) continue;
-      const dedupeKey = `${dmrId}/${tg}`;
-      if (seen.has(dedupeKey)) continue;
-      seen.add(dedupeKey);
-      const centroid = centroidForDmrId(dmrId);
-      if (!centroid) continue;
-      const [dLat, dLon] = jitter(dmrId || streamId, COUNTRY_JITTER_SPREAD_DEG);
-      points.push({
-        key: `obp-${system}-${streamId}`,
-        peerId: dmrId,
-        system,
-        callsign,
-        location: centroid.name,
-        kind: 'bridge',
-        lat: centroid.lat + dLat,
-        lon: centroid.lon + dLon,
-        source: 'country',
-        rxFreq: '',
-        txFreq: '',
-        colorcode: '',
-        connected: '',
-        active: true,
-        activeRx: true,
-        activeCall: callsign,
-        activeTg: tg,
-      });
     }
   }
   return points;

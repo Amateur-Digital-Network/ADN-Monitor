@@ -1,7 +1,6 @@
 {
   "nav_dash": "Panel",
   "nav_lnksys": "Powiązane systemy",
-  "nav_map": "Mapa",
   "nav_opb": "OpenBridge",
   "nav_tptg": "Top TG",
   "nav_mon": "Monitor",
@@ -385,13 +384,11 @@
   "map_exit_fullscreen": "Wyjdź z pełnego ekranu",
   "map_search": "Znak, DMR ID, lokalizacja…",
   "map_counts": "{{systems}} systemów · {{active}} na antenie",
-  "map_note": "Systemy są umieszczane tam, gdzie podają swoje współrzędne; znaczniki przerywane są przybliżone.",
+  "map_note": "Systemy są umieszczane tam, gdzie podają swoje współrzędne; półprzezroczyste znaczniki są przybliżone.",
   "map_note_mobile": "Dotknij znacznika, aby zobaczyć szczegóły.",
-  "map_disabled": "Mapa jest wyłączona w tym panelu.",
   "map_qrz": "Profil QRZ",
   "map_system": "System",
   "map_empty": "Brak elementów do pokazania przy tych warstwach i filtrach.",
   "map_empty_onair": "W tej chwili nikt nie nadaje przez ten serwer.",
-  "map_note_scope": "Tylko systemy połączone z tym serwerem podają współrzędne; połączenia przychodzące przez OpenBridge są umieszczane nad krajem nadającego DMR ID.",
   "map_counts_gps": "{{n}} GPS"
 }

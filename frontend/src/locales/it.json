@@ -1,7 +1,6 @@
 {
   "nav_dash": "Dashboard",
   "nav_lnksys": "Sistemi Collegati",
-  "nav_map": "Mappa",
   "nav_opb": "OpenBridge",
   "nav_tptg": "Top TG's",
   "nav_lsthrd": "Registro Ultime Ascoltate",
@@ -385,13 +384,11 @@
   "map_exit_fullscreen": "Esci da schermo intero",
   "map_search": "Nominativo, DMR ID, posizione…",
   "map_counts": "{{systems}} sistemi · {{active}} in onda",
-  "map_note": "I sistemi vengono collocati dove dichiarano le loro coordinate; i marcatori tratteggiati sono approssimativi.",
+  "map_note": "I sistemi vengono collocati dove dichiarano le loro coordinate; i marcatori sbiaditi sono approssimativi.",
   "map_note_mobile": "Tocca un marcatore per i dettagli.",
-  "map_disabled": "La mappa è disattivata in questo dashboard.",
   "map_qrz": "Profilo QRZ",
   "map_system": "Sistema",
   "map_empty": "Niente da mostrare con questi livelli e filtri.",
   "map_empty_onair": "In questo momento nessuno sta trasmettendo attraverso questo server.",
-  "map_note_scope": "Solo i sistemi collegati a questo server dichiarano coordinate; le chiamate che arrivano via OpenBridge vengono collocate sul paese del DMR ID che trasmette.",
   "map_counts_gps": "{{n}} GPS"
 }

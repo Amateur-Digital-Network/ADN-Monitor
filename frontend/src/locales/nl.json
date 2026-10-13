@@ -1,7 +1,6 @@
 {
   "nav_dash": "Dashboard",
   "nav_lnksys": "Gekoppelde Systemen",
-  "nav_map": "Kaart",
   "nav_opb": "OpenBridge",
   "nav_tptg": "Top TG's",
   "nav_lsthrd": "Laatst Gehoord Log",
@@ -385,13 +384,11 @@
   "map_exit_fullscreen": "Volledig scherm verlaten",
   "map_search": "Roepletters, DMR-ID, locatie…",
   "map_counts": "{{systems}} systemen · {{active}} in de lucht",
-  "map_note": "Systemen staan waar ze hun coördinaten opgeven; gestippelde markers zijn bij benadering.",
+  "map_note": "Systemen staan waar ze hun coördinaten opgeven; vervaagde markers zijn bij benadering.",
   "map_note_mobile": "Tik op een marker voor details.",
-  "map_disabled": "De kaart is uitgeschakeld in dit dashboard.",
   "map_qrz": "QRZ-profiel",
   "map_system": "Systeem",
   "map_empty": "Niets te tonen met deze lagen en filters.",
   "map_empty_onair": "Op dit moment zendt niemand via deze server.",
-  "map_note_scope": "Alleen systemen die met deze server verbonden zijn geven coördinaten door; oproepen die via OpenBridge binnenkomen worden op het land van de zendende DMR-ID geplaatst.",
   "map_counts_gps": "{{n}} GPS"
 }

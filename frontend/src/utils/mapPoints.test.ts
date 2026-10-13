@@ -18,11 +18,12 @@
 
 import { describe, expect, it } from 'vitest';
 import type { MapConfig } from '../context/DashboardConfigContext';
-import { buildOpenBridgePoints, buildPeerPoints, parseCoordinate, peerKind, roundCoordinate } from './mapPoints';
+import { buildPeerPoints, parseCoordinate, peerKind, roundCoordinate } from './mapPoints';
 
 function mapConfig(overrides: Partial<MapConfig> = {}): MapConfig {
   return {
     enabled: true,
+    style: 1,
     tileUrl: '',
     tileUrlDark: '',
     attribution: '',
@@ -168,6 +169,40 @@ describe('buildPeerPoints', () => {
     expect(points[0].source).toBe('country');
   });
 
+  it('marks only the system someone transmits through, with the call, ID and TG', () => {
+    const ctable = {
+      MASTERS: {
+        SYSTEM: {
+          PEERS: {
+            '730044401': { 2: { TS: true, TRX: 'RX', SUB: 'Rodrigo (7300444)', CALL: 'CE5RPY', TG: 'TG&nbsp;730' } },
+            '730044402': { 2: { TS: true, TRX: 'TX', SUB: 'Rodrigo (7300444)', CALL: 'CE5RPY', TG: 'TG&nbsp;730' } },
+          },
+        },
+      },
+    };
+    const [talking, listening] = buildPeerPoints(ctable, mapConfig(), true);
+    expect(talking).toMatchObject({ active: true, activeCall: 'CE5RPY', activeId: '7300444', activeTg: 'TG 730' });
+    expect(listening).toMatchObject({ active: false, activeCall: '', activeId: '', activeTg: '' });
+  });
+
+  it('places a bridge on its country whatever coordinates it logged in with', () => {
+    const ctable = {
+      MASTERS: {
+        'SYSTEM-0': {
+          PEERS: {
+            '730044420': { RX_FREQ: 'N/A', TX_FREQ: 'N/A', LATITUDE: '38.0', LONGITUDE: '-50.0' },
+          },
+        },
+      },
+    };
+    expect(buildPeerPoints(ctable, mapConfig(), true)[0]).toMatchObject({
+      kind: 'bridge',
+      source: 'country',
+      lat: -35.6751,
+      lon: -71.543,
+    });
+  });
+
   it('drops a zero-island peer when country fallback is not allowed', () => {
     const ctable = {
       MASTERS: {
@@ -179,56 +214,5 @@ describe('buildPeerPoints', () => {
       },
     };
     expect(buildPeerPoints(ctable, mapConfig(), false)).toHaveLength(0);
-  });
-});
-
-describe('buildOpenBridgePoints', () => {
-  const streamEntry = (
-    trx: string,
-    startedAt: number,
-    dmrId = '7300012345',
-  ): [string, string, string, number, string] => [trx, 'CE5RPY', '647', startedAt, dmrId];
-
-  it('keeps a fresh RX stream', () => {
-    const ctable = {
-      OPENBRIDGES: { 'OBP-CL': { STREAMS: { s1: streamEntry('RX', Date.now() / 1000) } } },
-    };
-    expect(buildOpenBridgePoints(ctable, true)).toHaveLength(1);
-  });
-
-  it('drops a stream older than the max age', () => {
-    const ctable = {
-      OPENBRIDGES: { 'OBP-CL': { STREAMS: { s1: streamEntry('RX', Date.now() / 1000 - 200) } } },
-    };
-    expect(buildOpenBridgePoints(ctable, true, 120)).toHaveLength(0);
-  });
-
-  it('ignores TX-direction entries (our own echo)', () => {
-    const ctable = {
-      OPENBRIDGES: { 'OBP-CL': { STREAMS: { s1: streamEntry('TX', Date.now() / 1000) } } },
-    };
-    expect(buildOpenBridgePoints(ctable, true)).toHaveLength(0);
-  });
-
-  it('collapses duplicate ID+TG streams to one marker', () => {
-    const now = Date.now() / 1000;
-    const ctable = {
-      OPENBRIDGES: {
-        'OBP-CL': {
-          STREAMS: {
-            s1: streamEntry('RX', now),
-            s2: streamEntry('RX', now),
-          },
-        },
-      },
-    };
-    expect(buildOpenBridgePoints(ctable, true)).toHaveLength(1);
-  });
-
-  it('returns nothing when approximate positions are not allowed', () => {
-    const ctable = {
-      OPENBRIDGES: { 'OBP-CL': { STREAMS: { s1: streamEntry('RX', Date.now() / 1000) } } },
-    };
-    expect(buildOpenBridgePoints(ctable, false)).toHaveLength(0);
   });
 });
