@@ -88,3 +88,28 @@ def test_health_unchanged_for_mqtt_ingest_config():
     }
     resp = TestClient(create_app(cfg)).get("/api/health")
     assert resp.json() == {"status": "ok", "service": "adn-monitor"}
+
+
+def test_dashboard_config_follows_yaml_edits_without_restart(tmp_path):
+    import os
+
+    from adn_monitor.infrastructure.config_loader import load_config
+
+    path = tmp_path / "adn-monitor.yaml"
+    path.write_text("DASHBOARD:\n  DASHTITLE: ADN\nMAP:\n  ENABLED: true\n", encoding="utf-8")
+    client = TestClient(create_app(load_config(str(path)).value, config_path=str(path)))
+    assert client.get("/api/config/dashboard").json()["map"]["enabled"] is True
+
+    def save(text, bump):
+        path.write_text(text, encoding="utf-8")
+        stat = path.stat()
+        os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns + bump))
+
+    save("DASHBOARD:\n  DASHTITLE: ADN\nMAP:\n  ENABLED: false\n  STYLE: 2\n", 10**9)
+    body = client.get("/api/config/dashboard").json()
+    assert body["map"]["enabled"] is False
+    assert body["map"]["style"] == 2
+
+    # A broken save (half-way through an edit) keeps the last good config.
+    save("DASHBOARD: [\n", 2 * 10**9)
+    assert client.get("/api/config/dashboard").json()["map"]["style"] == 2
