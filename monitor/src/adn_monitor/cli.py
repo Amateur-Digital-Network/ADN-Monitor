@@ -74,7 +74,7 @@ def main() -> None:
     import uvicorn
 
     uvicorn.run(
-        create_app(config),
+        create_app(config, config_path=args.config),
         host=bind,
         port=port,
         log_level=str(log_conf.get("LOG_LEVEL", "info")).lower(),

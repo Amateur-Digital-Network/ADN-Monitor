@@ -100,8 +100,12 @@ def _normalize_news(dashboard: dict[str, Any]) -> list[dict[str, str]]:
     return items
 
 
+# MAP.STYLE: 1 raster tiles (TILE_URL), 2 vector world (country shapes, no tile provider).
+MAP_STYLES = (1, 2)
+
 _MAP_DEFAULTS: dict[str, Any] = {
     "enabled": True,
+    "style": 1,
     "tileUrl": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     # Empty: the dashboard darkens the light tiles with a CSS filter, so a dark
     # theme needs no second tile provider (and no API key).
@@ -109,7 +113,8 @@ _MAP_DEFAULTS: dict[str, Any] = {
     "attribution": '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     "maxZoom": 18,
     "center": [20.0, 0.0],
-    "zoom": 2,
+    # None ("auto"): each map fits the whole world to its own size, phone or desktop.
+    "zoom": None,
     # Hotspots sit at someone's home: coarsen them to ~1 km by default.
     "hotspotPrecision": 2,
     "repeaterPrecision": None,
@@ -123,6 +128,7 @@ _MAP_DEFAULTS: dict[str, Any] = {
 # MAP section keys (YAML upper case) -> JSON keys used by the frontend.
 _MAP_KEYS: tuple[tuple[str, str], ...] = (
     ("ENABLED", "enabled"),
+    ("STYLE", "style"),
     ("TILE_URL", "tileUrl"),
     ("TILE_URL_DARK", "tileUrlDark"),
     ("ATTRIBUTION", "attribution"),
@@ -162,7 +168,18 @@ def _map_value(json_key: str, value: object) -> Any:
     """Coerce one MAP entry to the type the frontend expects."""
     if json_key in ("enabled", "approxByCountry"):
         return _bool(value)
-    if json_key in ("maxZoom", "zoom", "gpsRefreshSec"):
+    if json_key == "style":
+        try:
+            style = int(value)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return _MAP_DEFAULTS[json_key]
+        return style if style in MAP_STYLES else _MAP_DEFAULTS[json_key]
+    if json_key == "zoom":
+        try:
+            return float(value)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return _MAP_DEFAULTS[json_key]
+    if json_key in ("maxZoom", "gpsRefreshSec"):
         try:
             return int(value)  # type: ignore[arg-type]
         except (TypeError, ValueError):
@@ -187,9 +204,9 @@ def _map_value(json_key: str, value: object) -> Any:
 
 
 def _normalize_map(config: dict[str, Any], dashboard: dict[str, Any]) -> dict[str, Any]:
-    """MAP settings for the map page (top-level ``MAP:`` or nested under ``DASHBOARD:``).
+    """MAP settings for the Home and Linked Systems maps (top-level ``MAP:`` or nested under ``DASHBOARD:``).
 
-    The page is turned on and off with ``MAP.ENABLED`` alone.
+    Both maps are turned on and off with ``MAP.ENABLED`` alone.
     """
     raw = config.get("MAP") or config.get("map") or dashboard.get("MAP") or dashboard.get("map") or {}
     out = dict(_MAP_DEFAULTS)

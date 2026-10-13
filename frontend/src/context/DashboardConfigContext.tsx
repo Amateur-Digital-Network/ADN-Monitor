@@ -60,8 +60,13 @@ const defaultAliases = buildDefaultAliases();
 export type NavLinkItem = { name: string; url: string };
 
 /** Map page settings (MAP section of adn-monitor.yaml, served by /api/config/dashboard). */
+export const MAP_STYLES = [1, 2] as const;
+export type MapStyle = (typeof MAP_STYLES)[number];
+
 export type MapConfig = {
   enabled: boolean;
+  /** 1 raster tiles, 2 vector world drawn from public/geo/countries.json. */
+  style: MapStyle;
   /** Raster tile template; with the dark theme tileUrlDark is used when set. */
   tileUrl: string;
   /** Dark tiles. Empty means: reuse tileUrl and darken it with a CSS filter. */
@@ -69,7 +74,8 @@ export type MapConfig = {
   attribution: string;
   maxZoom: number;
   center: [number, number];
-  zoom: number;
+  /** Null (MAP.ZOOM auto): fit the whole world to the size of each map. */
+  zoom: number | null;
   /** Decimals kept for hotspot / repeater coordinates (null = as reported). */
   hotspotPrecision: number | null;
   repeaterPrecision: number | null;
@@ -85,13 +91,14 @@ export type MapConfig = {
 
 export const defaultMapConfig: MapConfig = {
   enabled: true,
+  style: 1,
   tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   /** Empty: the light tiles are darkened with a CSS filter, so no second provider is needed. */
   tileUrlDark: '',
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   maxZoom: 18,
   center: [20, 0],
-  zoom: 2,
+  zoom: null,
   hotspotPrecision: 2,
   repeaterPrecision: null,
   approxByCountry: true,
@@ -172,12 +179,13 @@ function mergeMapConfig(raw: Partial<MapConfig> | undefined): MapConfig {
   };
   return {
     enabled: raw.enabled ?? defaultMapConfig.enabled,
+    style: MAP_STYLES.find((s) => s === Number(raw.style)) ?? defaultMapConfig.style,
     tileUrl: raw.tileUrl || defaultMapConfig.tileUrl,
     tileUrlDark: raw.tileUrlDark ?? defaultMapConfig.tileUrlDark,
     attribution: raw.attribution || defaultMapConfig.attribution,
     maxZoom: Number(raw.maxZoom) || defaultMapConfig.maxZoom,
     center: Number.isFinite(center[0]) && Number.isFinite(center[1]) ? center : defaultMapConfig.center,
-    zoom: Number(raw.zoom) || defaultMapConfig.zoom,
+    zoom: raw.zoom == null || !Number.isFinite(Number(raw.zoom)) ? null : Number(raw.zoom),
     hotspotPrecision: precision(raw.hotspotPrecision, defaultMapConfig.hotspotPrecision),
     repeaterPrecision: precision(raw.repeaterPrecision, defaultMapConfig.repeaterPrecision),
     approxByCountry: raw.approxByCountry ?? defaultMapConfig.approxByCountry,

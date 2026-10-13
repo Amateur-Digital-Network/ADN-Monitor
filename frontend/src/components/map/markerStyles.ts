@@ -22,7 +22,7 @@
  * Original works and this derivative are under GPLv3.
  */
 
-/** Marker palette and popup labels shared by the map page and its Leaflet canvas. */
+/** Marker palette, popup labels and HTML escaping shared by the dashboard maps. */
 
 export const MARKER_COLORS = {
   repeater: '#0ea5e9',
@@ -45,3 +45,11 @@ export type MapLabels = {
   system: string;
   qrz: string;
 };
+
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}

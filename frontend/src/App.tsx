@@ -54,7 +54,6 @@ import { getUiZoom } from './utils/uiZoom';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Systems = lazy(() => import('./pages/Systems'));
-const MapView = lazy(() => import('./pages/MapView'));
 const OpenBridge = lazy(() => import('./pages/OpenBridge'));
 const TopTg = lazy(() => import('./pages/TopTg'));
 const LastHeardLog = lazy(() => import('./pages/LastHeardLog'));
@@ -283,11 +282,6 @@ function App() {
               <Button color="inherit" component={Link} to="/systems">
                 {t('nav_lnksys', { defaultValue: 'Linked Systems' })}
               </Button>
-              {dashboard.map.enabled && (
-                <Button color="inherit" component={Link} to="/map">
-                  {t('nav_map', { defaultValue: 'Map' })}
-                </Button>
-              )}
               <Button color="inherit" component={Link} to="/openbridge">
                 {t('nav_opb', { defaultValue: 'OpenBridge' })}
               </Button>
@@ -367,11 +361,6 @@ function App() {
           <MenuItem component={Link} to="/systems" onClick={() => setAnchorEl(null)}>
             {t('nav_lnksys')}
           </MenuItem>
-          {dashboard.map.enabled && (
-            <MenuItem component={Link} to="/map" onClick={() => setAnchorEl(null)}>
-              {t('nav_map', { defaultValue: 'Map' })}
-            </MenuItem>
-          )}
           <MenuItem component={Link} to="/openbridge" onClick={() => setAnchorEl(null)}>
             {t('nav_opb')}
           </MenuItem>
@@ -572,7 +561,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/systems" element={<Systems />} />
-                <Route path="/map" element={<MapView />} />
+                <Route path="/map" element={<Navigate to="/systems" replace />} />
                 <Route path="/systemstg" element={<Navigate to="/systems" replace />} />
                 <Route path="/openbridge" element={<OpenBridge />} />
                 <Route path="/toptg" element={<TopTg />} />

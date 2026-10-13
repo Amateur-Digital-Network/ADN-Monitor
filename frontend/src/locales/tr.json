@@ -1,7 +1,6 @@
 {
   "nav_dash": "Kontrol paneli",
   "nav_lnksys": "Bağlı sistemler",
-  "nav_map": "Harita",
   "nav_opb": "OpenBridge",
   "nav_tptg": "En çok TG'ler",
   "nav_mon": "Monitör",
@@ -385,13 +384,11 @@
   "map_exit_fullscreen": "Tam ekrandan çık",
   "map_search": "Çağrı işareti, DMR ID, konum…",
   "map_counts": "{{systems}} sistem · {{active}} yayında",
-  "map_note": "Sistemler bildirdikleri koordinatlara yerleştirilir; kesik çizgili işaretçiler yaklaşıktır.",
+  "map_note": "Sistemler bildirdikleri koordinatlara yerleştirilir; soluk işaretçiler yaklaşıktır.",
   "map_note_mobile": "Ayrıntılar için bir işaretçiye dokunun.",
-  "map_disabled": "Harita bu kontrol panelinde devre dışı.",
   "map_qrz": "QRZ profili",
   "map_system": "Sistem",
   "map_empty": "Bu katman ve filtrelerle gösterilecek bir şey yok.",
   "map_empty_onair": "Şu anda bu sunucu üzerinden kimse yayın yapmıyor.",
-  "map_note_scope": "Yalnızca bu sunucuya bağlı sistemler koordinat bildirir; OpenBridge üzerinden gelen çağrılar, yayın yapan DMR ID'nin ülkesine yerleştirilir.",
   "map_counts_gps": "{{n}} GPS"
 }

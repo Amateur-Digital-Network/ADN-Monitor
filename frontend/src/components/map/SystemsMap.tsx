@@ -23,9 +23,9 @@
  */
 
 /**
- * Map page: one map with switchable layers (repeaters, hotspots, bridges,
- * live traffic, Last Heard stations and an optional external GPS feed) so each
- * operator picks what to see. Laid out for phones as much as for desktops.
+ * Linked Systems map: one map with switchable layers (repeaters, hotspots, bridges,
+ * live traffic and an optional external GPS feed) so each operator picks what to see.
+ * Laid out for phones as much as for desktops.
  */
 
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -44,27 +44,22 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
-import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import ZoomOutMapIcon from '@mui/icons-material/ZoomOutMap';
 import { useTranslation } from 'react-i18next';
 
-import { useWebSocketGroup } from '../hooks/useWebSocket';
-import { useDashboardConfig } from '../context/DashboardConfigContext';
+import { useDashboardConfig } from '../../context/DashboardConfigContext';
 import {
-  buildOpenBridgePoints,
   buildPeerPoints,
   parseGpsFeed,
   type Ctable,
   type GpsPoint,
   type PeerPoint,
-} from '../utils/mapPoints';
-import { MARKER_COLORS, type MapLabels } from '../components/map/markerStyles';
+} from '../../utils/mapPoints';
+import MapFrame from './MapFrame';
+import { MARKER_COLORS, type MapLabels } from './markerStyles';
 
-const LiveMap = lazy(() => import('../components/map/LiveMap'));
+const LiveMap = lazy(() => import('./LiveMap'));
 
-type LnksysPayload = { ctable?: Ctable };
-type OpbPayload = { ctable?: Ctable };
 
 const LAYER_IDS = ['repeaters', 'hotspots', 'bridges', 'onair', 'gps'] as const;
 type LayerId = (typeof LAYER_IDS)[number];
@@ -103,20 +98,17 @@ function storeFlag(key: string, value: boolean): void {
   }
 }
 
-export default function MapView() {
+/** The page passes its own lnksys ctable: a second subscriber would parse every message again. */
+export default function SystemsMap({ ctable }: { ctable: Ctable | null | undefined }) {
   const { t } = useTranslation();
   const theme = useTheme();
   const isNarrow = useMediaQuery(theme.breakpoints.down('sm'));
   const { map: mapConfig } = useDashboardConfig();
 
-  const { data: lnksysData } = useWebSocketGroup('lnksys');
-  // OpenBridge streams: live traffic from the rest of the network.
-  const { data: opbData } = useWebSocketGroup('opb');
 
   const [layers, setLayers] = useState<Set<LayerId>>(readStoredLayers);
   const [approx, setApprox] = useState(() => readStoredFlag('mapApprox', mapConfig.approxByCountry));
   const [follow, setFollow] = useState(() => readStoredFlag('mapFollow', false));
-  const [fullscreen, setFullscreen] = useState(false);
   const [search, setSearch] = useState('');
   const [fitSignal, setFitSignal] = useState(0);
   const [gpsPoints, setGpsPoints] = useState<GpsPoint[]>([]);
@@ -163,8 +155,6 @@ export default function MapView() {
     };
   }, [gpsEnabled, mapConfig.gpsUrl, mapConfig.gpsRefreshSec]);
 
-  const ctable = (lnksysData as LnksysPayload | null)?.ctable ?? null;
-  const opbCtable = (opbData as OpbPayload | null)?.ctable ?? null;
 
   const allPeers = useMemo(
     () => buildPeerPoints(ctable, mapConfig, approx),
@@ -180,11 +170,6 @@ export default function MapView() {
   const onairOnly =
     layers.has('onair') && !layers.has('repeaters') && !layers.has('hotspots') && !layers.has('bridges');
 
-  const networkCalls = useMemo(
-    () => (layers.has('onair') ? buildOpenBridgePoints(opbCtable, approx) : []),
-    [opbCtable, approx, layers],
-  );
-
   const peers = useMemo(() => {
     const own = allPeers.filter((point) => {
       const kindShown =
@@ -196,27 +181,21 @@ export default function MapView() {
       if (onairOnly && !airShown) return false;
       return true;
     });
-    return [...own, ...networkCalls].filter((point) =>
+    return own.filter((point) =>
       matches([point.callsign, point.peerId, point.location, point.system, point.activeCall, point.activeTg]),
     );
-  }, [allPeers, networkCalls, layers, matches, onairOnly]);
+  }, [allPeers, layers, matches, onairOnly]);
 
   const gps = useMemo(
     () => (gpsEnabled ? gpsPoints.filter((point) => matches([point.callsign, point.comment])) : []),
     [gpsEnabled, gpsPoints, matches],
   );
 
-  // First data: frame everything once, then leave the view to the operator.
+  // First data: frame everything connected once, then leave the view to the operator.
   useEffect(() => {
     if (firstFitDone.current || peers.length === 0) return;
     firstFitDone.current = true;
-    let stored = false;
-    try {
-      stored = localStorage.getItem('mapView') !== null;
-    } catch {
-      stored = false;
-    }
-    if (!stored) setFitSignal((value) => value + 1);
+    setFitSignal((value) => value + 1);
   }, [peers.length]);
 
   const labels: MapLabels = useMemo(
@@ -243,14 +222,6 @@ export default function MapView() {
     { id: 'onair', label: labels.onAir, color: MARKER_COLORS.active },
     { id: 'gps', label: labels.gps, color: MARKER_COLORS.gps, hidden: !mapConfig.gpsUrl },
   ];
-
-  if (!mapConfig.enabled) {
-    return (
-      <Typography color="text.secondary">
-        {t('map_disabled', { defaultValue: 'The map is disabled in this dashboard.' })}
-      </Typography>
-    );
-  }
 
   const activeCount = peers.filter((point: PeerPoint) => point.active).length;
   const nothingVisible = peers.length + gps.length === 0;
@@ -293,17 +264,6 @@ export default function MapView() {
         <Tooltip title={t('map_fit', { defaultValue: 'Fit to markers' })}>
           <IconButton onClick={() => setFitSignal((value) => value + 1)} size="small">
             <ZoomOutMapIcon />
-          </IconButton>
-        </Tooltip>
-        <Tooltip
-          title={
-            fullscreen
-              ? t('map_exit_fullscreen', { defaultValue: 'Exit full screen' })
-              : t('map_fullscreen', { defaultValue: 'Full screen' })
-          }
-        >
-          <IconButton onClick={() => setFullscreen((value) => !value)} size="small">
-            {fullscreen ? <CloseFullscreenIcon /> : <OpenInFullIcon />}
           </IconButton>
         </Tooltip>
       </Stack>
@@ -355,116 +315,67 @@ export default function MapView() {
     </Stack>
   );
 
-  const mapBox = (
+  const emptyNotice = nothingVisible ? (
     <Box
-      sx={
-        fullscreen
-          ? {
-              position: 'fixed',
-              inset: 0,
-              zIndex: theme.zIndex.modal,
-              bgcolor: 'background.default',
-            }
-          : {
-              position: 'relative',
-              height: { xs: 'min(70dvh, 520px)', sm: 'min(72dvh, 620px)', md: 'min(75dvh, 760px)' },
-              minHeight: 320,
-              borderRadius: 2,
-              overflow: 'hidden',
-              border: '1px solid',
-              borderColor: 'divider',
-            }
-      }
+      sx={{
+        position: 'absolute',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        p: 2,
+        pointerEvents: 'none',
+        zIndex: 500,
+      }}
     >
-      <Suspense
-        fallback={
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            <CircularProgress />
-          </Box>
-        }
-      >
-        <LiveMap
-          peers={peers}
-          gps={gps}
-          config={mapConfig}
-          labels={labels}
-          fitSignal={fitSignal}
-          follow={follow}
-        />
-      </Suspense>
-      {nothingVisible && (
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            p: 2,
-            pointerEvents: 'none',
-            zIndex: 500,
-          }}
-        >
-          <Paper sx={{ px: 2, py: 1.25, maxWidth: 360, textAlign: 'center', opacity: 0.94 }}>
-            <Typography variant="body2" color="text.secondary">
-              {onairOnly
-                ? t('map_empty_onair', {
-                    defaultValue: 'Nobody is transmitting through this server right now.',
-                  })
-                : t('map_empty', {
-                    defaultValue: 'Nothing to show with these layers and filters.',
-                  })}
-            </Typography>
-          </Paper>
-        </Box>
-      )}
-      {fullscreen && (
-        <IconButton
-          onClick={() => setFullscreen(false)}
-          aria-label={t('map_exit_fullscreen', { defaultValue: 'Exit full screen' })}
-          sx={{
-            position: 'absolute',
-            top: 10,
-            right: 10,
-            zIndex: 1000,
-            bgcolor: 'background.paper',
-            boxShadow: 2,
-            '&:hover': { bgcolor: 'background.paper' },
-          }}
-        >
-          <CloseFullscreenIcon />
-        </IconButton>
-      )}
+      <Paper sx={{ px: 2, py: 1.25, maxWidth: 360, textAlign: 'center', opacity: 0.94 }}>
+        <Typography variant="body2" color="text.secondary">
+          {onairOnly
+            ? t('map_empty_onair', {
+                defaultValue: 'Nobody is transmitting through this server right now.',
+              })
+            : t('map_empty', {
+                defaultValue: 'Nothing to show with these layers and filters.',
+              })}
+        </Typography>
+      </Paper>
     </Box>
-  );
+  ) : null;
 
   return (
-    <Box>
-      {!fullscreen && (
-        <Typography variant="h6" sx={{ mb: 1.5 }}>
-          {t('map_title', { defaultValue: 'Map' })}
-        </Typography>
-      )}
-      {!fullscreen && (
-        <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: 2 }}>{controls}</Paper>
-      )}
-      {mapBox}
-      {!fullscreen && (
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-          {t('map_note', {
-            defaultValue:
-              'Systems are placed where they report their coordinates; dashed markers are approximate.',
-          })}
-          {' '}
-          {t('map_note_scope', {
-            defaultValue:
-              'Only systems connected to this server report coordinates; calls arriving over OpenBridge are placed over the country of the transmitting DMR ID.',
-          })}
-          {isNarrow
-            ? ` ${t('map_note_mobile', { defaultValue: 'Tap a marker for details.' })}`
-            : ''}
-        </Typography>
-      )}
+    <Box sx={{ mb: 2 }}>
+      <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+        {t('map_title', { defaultValue: 'Map' })}
+      </Typography>
+      <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: 2 }}>{controls}</Paper>
+      <MapFrame
+        height={{ xs: 'min(70dvh, 520px)', sm: 'min(72dvh, 620px)', md: 'min(75dvh, 760px)' }}
+        overlay={emptyNotice}
+      >
+        <Suspense
+          fallback={
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              <CircularProgress />
+            </Box>
+          }
+        >
+          <LiveMap
+            peers={peers}
+            gps={gps}
+            config={mapConfig}
+            labels={labels}
+            fitSignal={fitSignal}
+            follow={follow}
+          />
+        </Suspense>
+      </MapFrame>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+        {t('map_note', {
+          defaultValue:
+            'Systems are placed where they report their coordinates; faded markers are approximate.',
+        })}
+        {isNarrow ? ` ${t('map_note_mobile', { defaultValue: 'Tap a marker for details.' })}` : ''}
+      </Typography>
     </Box>
   );
 }

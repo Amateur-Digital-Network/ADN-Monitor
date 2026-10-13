@@ -163,12 +163,17 @@ DASHBOARD:
       # - name: "New reflector"
       #   url: "https://adn.systems"
 
-# Map page (/map). Markers come from the coordinates each peer sends when it
-# logs in (RPTC); systems that report none are left out, or placed on their
-# country when APPROX_BY_COUNTRY is on. Layers are chosen by the visitor.
+# Maps: Home shows a flag over each country with a call on air; Linked Systems
+# shows the connected systems. Markers come from the coordinates each peer sends
+# when it logs in (RPTC); systems that report none are left out, or placed on
+# their country when APPROX_BY_COUNTRY is on. Layers are chosen by the visitor.
 MAP:
-  # Show the map page and its navbar entry.
+  # Show both maps.
   ENABLED: true
+
+  # Look of both maps: 1 = raster tiles (TILE_URL below), 2 = vector world:
+  # country shapes with their codes, active countries outlined, no tile provider.
+  STYLE: 1
 
   # Raster tiles. By default OpenStreetMap tiles are used and, with the dark
   # theme, darkened with a CSS filter: no second provider and no API key.
@@ -180,9 +185,11 @@ MAP:
   # ATTRIBUTION: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   # MAX_ZOOM: 18
 
-  # First view when the visitor has no saved one: [latitude, longitude] + zoom
+  # First view when the visitor has no saved one. ZOOM auto fits the whole world
+  # to each map, phone or desktop. A number (quarter steps, e.g. 6 or 7.5) fixes
+  # the zoom around CENTER [latitude, longitude] instead.
+  ZOOM: auto
   CENTER: [20, 0]
-  ZOOM: 2
 
   # Privacy: decimals kept for the coordinates sent to the browser.
   # 2 is about 1 km, 3 about 100 m, null keeps them as reported.

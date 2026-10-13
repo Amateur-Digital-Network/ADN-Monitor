@@ -1,7 +1,6 @@
 {
   "nav_dash": "Töölaud",
   "nav_lnksys": "Lingitud süsteemid",
-  "nav_map": "Kaart",
   "nav_opb": "OpenBridge",
   "nav_tptg": "Tip TG-d",
   "nav_mon": "Monitor",
@@ -385,13 +384,11 @@
   "map_exit_fullscreen": "Välju täisekraanilt",
   "map_search": "Kutsung, DMR ID, asukoht…",
   "map_counts": "{{systems}} süsteemi · {{active}} eetris",
-  "map_note": "Süsteemid paigutatakse sinna, kus nad oma koordinaadid teatavad; katkendjoonega markerid on ligikaudsed.",
+  "map_note": "Süsteemid paigutatakse sinna, kus nad oma koordinaadid teatavad; poolläbipaistvad markerid on ligikaudsed.",
   "map_note_mobile": "Üksikasjade nägemiseks puuduta markerit.",
-  "map_disabled": "Kaart on selles töölaual välja lülitatud.",
   "map_qrz": "QRZ profiil",
   "map_system": "Süsteem",
   "map_empty": "Nende kihtide ja filtritega pole midagi näidata.",
   "map_empty_onair": "Praegu ei saada keegi selle serveri kaudu.",
-  "map_note_scope": "Ainult selle serveriga ühendatud süsteemid teatavad koordinaadid; OpenBridge'i kaudu saabuvad kõned paigutatakse saatva DMR ID riigi kohale.",
   "map_counts_gps": "{{n}} GPS"
 }

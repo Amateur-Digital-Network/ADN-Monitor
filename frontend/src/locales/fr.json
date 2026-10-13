@@ -1,7 +1,6 @@
 {
   "nav_dash": "Tableau de bord",
   "nav_lnksys": "Systèmes Liés",
-  "nav_map": "Carte",
   "nav_opb": "OpenBridge",
   "nav_menu": "Ouvrir le menu",
   "nav_help": "Aide",
@@ -385,13 +384,11 @@
   "map_exit_fullscreen": "Quitter le plein écran",
   "map_search": "Indicatif, DMR ID, lieu…",
   "map_counts": "{{systems}} systèmes · {{active}} en émission",
-  "map_note": "Les systèmes sont placés là où ils déclarent leurs coordonnées ; les marqueurs en pointillés sont approximatifs.",
+  "map_note": "Les systèmes sont placés là où ils déclarent leurs coordonnées ; les marqueurs estompés sont approximatifs.",
   "map_note_mobile": "Touchez un marqueur pour le détail.",
-  "map_disabled": "La carte est désactivée sur ce tableau de bord.",
   "map_qrz": "Profil QRZ",
   "map_system": "Système",
   "map_empty": "Rien à afficher avec ces couches et ces filtres.",
   "map_empty_onair": "Personne n'émet via ce serveur pour le moment.",
-  "map_note_scope": "Seuls les systèmes connectés à ce serveur déclarent des coordonnées ; les appels arrivant par OpenBridge sont placés sur le pays du DMR ID qui émet.",
   "map_counts_gps": "{{n}} GPS"
 }
