@@ -4,6 +4,52 @@ All notable changes to **adn-monitor** (monitor + dashboard) are documented here
 
 <!-- version list -->
 
+## v2.6.0 (2026-10-14)
+
+### Bug Fixes
+
+- **dashboard**: A call no longer stays lit when its END misses its START
+  ([`1d5c6db`](https://github.com/Amateur-Digital-Network/ADN-Monitor/commit/1d5c6dba68eead08cc8dfaad5bd1410694460345))
+
+- **dashboard**: An OpenBridge leaving a stream no longer turns the hotspots off
+  ([`8505fb7`](https://github.com/Amateur-Digital-Network/ADN-Monitor/commit/8505fb761ae285410e76f6813024cfb356f70551))
+
+- **map**: Place callers on every RadioID range of their country, else on the TG's
+  ([`c4811aa`](https://github.com/Amateur-Digital-Network/ADN-Monitor/commit/c4811aa5261d7eb91ec43e2142fbb0b31fab050b))
+
+- **map**: Round hotspot/repeater coordinates on the server, remove redundant SHOW_MAP
+  ([`5a9fb21`](https://github.com/Amateur-Digital-Network/ADN-Monitor/commit/5a9fb2124468d1084056652142fc1c8e3f8a31f1))
+
+### Documentation
+
+- **readme**: Sync version parity note to 2.6
+  ([`55c01a5`](https://github.com/Amateur-Digital-Network/ADN-Monitor/commit/55c01a528047df89ee748942b5cfdd323a862362))
+
+### Features
+
+- **config**: Dashboard JSON follows adn-monitor.yaml edits without a restart
+  ([`2b9cbbd`](https://github.com/Amateur-Digital-Network/ADN-Monitor/commit/2b9cbbd8dd609d951150457e47b01ad30fe13e40))
+
+- **map**: Add map page with switchable layers
+  ([`55c51a9`](https://github.com/Amateur-Digital-Network/ADN-Monitor/commit/55c51a98317f5aa210ac345a7922e13b98294dd9))
+
+- **map**: Allow switching the page off from DASHBOARD.SHOW_MAP
+  ([`a1309f2`](https://github.com/Amateur-Digital-Network/ADN-Monitor/commit/a1309f2a64a108c935afdcd0ea5fceacc46b3cee))
+
+- **map**: Map styles, QSO origins on Home, systems map on Linked Systems
+  ([`8a0d71e`](https://github.com/Amateur-Digital-Network/ADN-Monitor/commit/8a0d71e858f0cb04043741e2eefa05c0b160053e))
+
+### Performance Improvements
+
+- **dashboard**: Cut the work and the payload of each voice event
+  ([`3c6789d`](https://github.com/Amateur-Digital-Network/ADN-Monitor/commit/3c6789dcac7b4a8dfdc745e862dd2560cbb95903))
+
+### Testing
+
+- **map**: Add vitest and cover mapPoints.ts (parsing, precision, OpenBridge dedup)
+  ([`701ab82`](https://github.com/Amateur-Digital-Network/ADN-Monitor/commit/701ab82e6db5f469e874497ead64bc46a74664f2))
+
+
 ## v2.5.3 (2026-07-31)
 
 ### Bug Fixes

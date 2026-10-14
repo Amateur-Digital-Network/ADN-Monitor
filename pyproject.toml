@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adn-monitor"
-version = "2.5.3"
+version = "2.6.0"
 description = "ADN Systems Monitor (FastAPI dashboard + report ingest)"
 readme = "README.md"
 license = { text = "GPL-3.0-or-later" }
