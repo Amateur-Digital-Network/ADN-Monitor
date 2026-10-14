@@ -20,7 +20,7 @@ def _state(masters: dict[str, int]) -> MonitorState:
             for system, peer in masters.items()
         },
         "PEERS": {},
-        "OPENBRIDGES": {},
+        "OPENBRIDGES": {name: {"STREAMS": {}} for name in ("OBP-CL2", "OBP-USA", "OBP-GR")},
     }
     return state
 
@@ -50,6 +50,20 @@ def test_an_end_tx_missing_for_some_hotspots_still_ends_the_call_for_all() -> No
     assert len(_lit(state)) == 5
     for n in range(3):
         _event(state, f"GROUP VOICE,END,TX,SYSTEM-{n},333,714009901,7140099,2,{TG},3.0")
+    assert _lit(state) == []
+
+
+def test_an_openbridge_leaving_the_stream_keeps_the_hotspots_lit() -> None:
+    # Seen on 7301: OBP-USA quenched (BCSQ) and OBP-GR's copy was ignored by loop control
+    # 0.2 s into a call from OBP-CL2; their END,TX turned every hotspot chip off.
+    state = _state({"SYSTEM-4": 730000104, "SYSTEM-8": 730000108})
+    _event(state, f"GROUP VOICE,START,RX,OBP-CL2,666,7302,7300391,1,{TG}")
+    for system in ("SYSTEM-4", "SYSTEM-8"):
+        _event(state, f"GROUP VOICE,START,TX,{system},666,7302,7300391,2,{TG}")
+    for obp in ("OBP-USA", "OBP-GR"):
+        _event(state, f"GROUP VOICE,END,TX,{obp},666,7302,7300391,1,{TG},0.2")
+    assert _lit(state) == ["SYSTEM-4", "SYSTEM-8"]
+    _event(state, f"GROUP VOICE,END,RX,OBP-CL2,666,7302,7300391,1,{TG},2.8")
     assert _lit(state) == []
 
 
