@@ -74,7 +74,7 @@ def load_config(cfg_file: str) -> Result[dict, ConfigError]:
     """
     Load config from YAML (adn-monitor.yaml).
     Returns Success(config_dict) or Failure(ConfigError).
-    config_dict has keys: GLOBAL, ADN_CXN, OPB_FLTR, FILES, LOG, WS, DASHBOARD, DB (if present), ALIASES (if present).
+    config_dict has keys: GLOBAL, ADN_CXN, OPB_FLTR, FILES, LOG, WS, DASHBOARD, DB (if present), ALIASES (if present), MAP (if present).
     """
     path = Path(cfg_file)
     ext = path.suffix.lower()
@@ -257,6 +257,11 @@ def load_config(cfg_file: str) -> Result[dict, ConfigError]:
             "PBKDF2_ITERATIONS": _int(db.get("PBKDF2_ITERATIONS"), 2000),
             "USE_SELFSERVICE": _bool(db.get("USE_SELFSERVICE", True)),
         }
+
+    # MAP (map page; kept as written for REST /api/config/dashboard)
+    map_conf = data.get("MAP")
+    if isinstance(map_conf, dict):
+        CONF["MAP"] = dict(map_conf)
 
     # DASHBOARD (preserve nested nav_links/footer/news for REST /api/config/dashboard)
     dash = data.get("DASHBOARD") or {}

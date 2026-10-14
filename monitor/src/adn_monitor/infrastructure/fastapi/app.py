@@ -40,7 +40,7 @@ from .composition import build_monitor_api
 from .runtime import MonitorRuntime
 from .routes.aliases_proxy import router as aliases_router
 from .routes.auth import router as auth_router
-from .routes.config_api import router as config_router
+from .routes.config_api import DashboardConfigSource, router as config_router
 from .routes.health import router as health_router
 from .routes.self_service import router as self_service_router
 from .routes.servers_status import router as servers_status_router
@@ -66,8 +66,8 @@ async def _lifespan(app: FastAPI):
             app.state.monitor_runtime = None
 
 
-def create_app(config: dict[str, Any]) -> FastAPI:
-    """Build the unified monitor HTTP app from ``load_config()`` dict."""
+def create_app(config: dict[str, Any], config_path: str | None = None) -> FastAPI:
+    """Build the unified monitor HTTP app from ``load_config()`` dict; ``config_path`` lets the dashboard JSON follow YAML edits."""
     app_conf = config.get("APP", {})
     title = config.get("DASHBOARD", {}).get("DASHTITLE", "ADN Monitor")
 
@@ -77,6 +77,7 @@ def create_app(config: dict[str, Any]) -> FastAPI:
         lifespan=_lifespan,
     )
     app.state.monitor_config = config
+    app.state.dashboard_config = DashboardConfigSource(config, config_path)
     app.state.monitor_api = build_monitor_api(config)
 
     db = config.get("DB") or {}

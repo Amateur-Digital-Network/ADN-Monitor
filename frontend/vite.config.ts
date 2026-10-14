@@ -53,6 +53,9 @@ export default defineConfig({
             if (id.includes('@mui')) return 'vendor-mui';
             if (id.includes('react-dom') || id.includes('react/')) return 'vendor-react';
             if (id.includes('react-router') || id.includes('react-i18next') || id.includes('i18next')) return 'vendor-router-i18n';
+            // Only the Linked Systems map clusters; the Home map loads plain Leaflet.
+            if (id.includes('leaflet.markercluster')) return 'vendor-leaflet-cluster';
+            if (id.includes('leaflet')) return 'vendor-leaflet';
           }
         },
       },

@@ -51,7 +51,10 @@ import {
 } from '../context/LiveConnectedContext';
 import { TgChipGroup } from '../components/TgChipGroup';
 import { MasterPeerCards, ServicePeerCards } from '../components/LinkedSystemsCards';
-import type { ReactNode } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
+import { useDashboardConfig } from '../context/DashboardConfigContext';
+
+const SystemsMap = lazy(() => import('../components/map/SystemsMap'));
 
 type TsEntry = { TS?: boolean | string; TRX?: string; SUB?: string; DEST?: string };
 type SingleTs = { TGID?: number | string; TO?: string };
@@ -126,6 +129,7 @@ export default function Systems() {
   const payload = data as LnksysPayload | null;
   const ctable = payload?.ctable;
   const emaster = payload?.emaster ?? false;
+  const { map: mapConfig } = useDashboardConfig();
 
   if (data == null) {
     return (
@@ -323,6 +327,12 @@ export default function Systems() {
           </Card>
         </Grid>
       </Grid>
+
+      {mapConfig.enabled && (
+        <Suspense fallback={null}>
+          <SystemsMap ctable={ctable} />
+        </Suspense>
+      )}
 
       {countRepeaters > 0 && (
         <Paper sx={tablePaperSx}>

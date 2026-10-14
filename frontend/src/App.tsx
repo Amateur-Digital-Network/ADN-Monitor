@@ -561,6 +561,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/systems" element={<Systems />} />
+                <Route path="/map" element={<Navigate to="/systems" replace />} />
                 <Route path="/systemstg" element={<Navigate to="/systems" replace />} />
                 <Route path="/openbridge" element={<OpenBridge />} />
                 <Route path="/toptg" element={<TopTg />} />

@@ -1,6 +1,6 @@
 # ADN Systems Monitor
 
-**Version 2.5.3** — pairs with **adn-server 2.0.0** (report v2 slim wire + JSON HELLO).
+**Version 2.6** — pairs with **adn-server 2.6** (report v2 slim wire + JSON HELLO).
 
 Releases are cut from **`master`** (merge `develop` → `master` when ready; semver from commit history since last tag).
 
@@ -44,6 +44,7 @@ Dashboard and monitor behaviour are defined in YAML under the monitor folder:
   - **ADN_CONNECTION**: IP and port of the ADN report server; optional **HELLO_TIMEOUT_MS** (wait for opcode `0xFF` HELLO from **adn-server** before assuming legacy **adn-dmr-server**). Detected mode is **legacy** or **v2** (JSON field `mode` on WebSocket messages prefixed with `v`). With v2, the footer shows **Monitor** and **Server** versions from HELLO.
   - **ALIASES**: URLs and files for alias (peers, subscribers, talkgroups).
   - **LOGGER**, **DASHBOARD** (title, language, nav/footer/news marquee links).
+  - **MAP**: the Home and Linked Systems maps. Style (tiles or vector world), tiles (light/dark) and attribution, first view, coordinate precision per system type, country fallback for systems that report no position, optional external GPS/APRS feed and per-peer coordinate overrides. See the **Map** section below.
 
 Paths inside the YAML (e.g. `LOG_PATH`, `PATH` for alias files) are relative to the **monitor/** directory when you run the monitor from there.
 
@@ -165,7 +166,7 @@ sudo nginx -t && sudo systemctl reload nginx
 2. `adn-monitor.yaml` and `.env` configured; **ADN_CONFIG_PATH** set.
 3. `npm run build` in `frontend/`; Nginx serves `frontend/dist/`.
 4. `monitor.py` running (systemd); Nginx proxies `/api` and `/ws` to `LISTEN_PORT`.
-5. **adn-server** **2.0.0** (report v2 slim wire + JSON HELLO; upgrade/restart if the footer shows an older server version).
+5. **adn-server** **2.6** (report v2 slim wire + JSON HELLO; upgrade/restart if the footer shows an older server version).
 
 ---
 
@@ -179,6 +180,41 @@ sudo nginx -t && sudo systemctl reload nginx
 Copy and adapt paths, domains, and certificates to your server.
 
 ---
+
+## Map
+
+**Home** puts a flag over each country with a call on air right now (local
+radios and calls coming in over OpenBridge, by the transmitting DMR ID).
+
+**Linked Systems** draws the network on one map and lets each visitor pick the layers:
+repeaters, hotspots, bridges, traffic **on air** right now (both this server's
+peers and the calls coming in over OpenBridge) and, when configured, an
+external **GPS** feed. It
+remembers the chosen layers and view, and has a full-screen mode for phones.
+
+`MAP.STYLE` sets the look of both maps: `1` raster tiles, `2` a vector world
+(country shapes with their codes, countries with traffic outlined) that needs no
+tile provider at all.
+
+Tiles come from OpenStreetMap and, with the dark theme, are darkened with a CSS
+filter, so no second tile provider and no API key are needed. `MAP.TILE_URL_DARK`
+switches to a real dark basemap if you have one.
+
+Positions come from the `LATITUDE` / `LONGITUDE` a peer sends in its login
+(RPTC). Peers that report none are hidden, or drawn dashed over their country
+(DMR ID prefix) when `APPROX_BY_COUNTRY` is on; `OVERRIDES` pins exact
+coordinates for a given peer ID.
+
+Privacy: a hotspot's coordinates are usually someone's home, so
+`HOTSPOT_PRECISION` (2 decimals, about 1 km) rounds them **before** they are
+sent to the browser. Set it to `null` to publish them as reported.
+
+The page is switched on and off with `MAP.ENABLED`. Off, neither the page nor
+its navbar entry exists.
+
+With **adn-server** (v2) the map needs a server that includes `latitude` /
+`longitude` in its `dashboard_state` report; with the legacy **adn-dmr-server**
+they are already in `CONFIG`.
 
 ## IPv6 support
 

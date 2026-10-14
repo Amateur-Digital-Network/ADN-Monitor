@@ -45,6 +45,7 @@ from .tgstats import (
     _peer_single_mode,
     clear_peer_ua_sessions,
     clear_voice_ts_for_destination,
+    clear_voice_ts_for_stream,
     lookup_ua_timeout_for_peer,
     register_ua_session,
 )
@@ -435,6 +436,7 @@ def rts_update_impl(
                     peer_ts["TG"] = tg_short
                     peer_ts["TRX"] = crxstatus
                     peer_ts["ANNOUNCEMENT"] = is_announcement
+                    peer_ts["STREAM"] = stream_id
                 elif action == "END":
                     if (
                         trx == "TX"
@@ -479,9 +481,18 @@ def rts_update_impl(
                             peer_ts["TG"] = tg_short
                             peer_ts["TRX"] = "TX"
                             peer_ts["ANNOUNCEMENT"] = is_announcement
+                            peer_ts["STREAM"] = stream_id
                     elif action == "END":
                         if not _peer_slot_busy_other_tg(peer_ts, destination):
                             clear_voice_ts_for_destination(src_peer_row, destination)
+    # An OpenBridge END,TX is that link alone leaving the stream (BCSQ, loop control), often
+    # a fraction of a second into the call: it must not clear the hotspots still hearing it.
+    if (
+        action == "END"
+        and call_type in ("GROUP VOICE", "PRIVATE VOICE")
+        and not (trx == "TX" and system in ctable.get("OPENBRIDGES", {}))
+    ):
+        clear_voice_ts_for_stream(ctable, stream_id)
 
     server_mode = getattr(state, "server_mode", ServerMode.LEGACY)
     if system in ctable.get("OPENBRIDGES", {}):
