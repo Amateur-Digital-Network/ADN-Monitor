@@ -28,6 +28,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import zlib
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -41,6 +42,9 @@ from ...application.ports import BroadcastPort
 from .db_sync_render import sync_select_for_render, sync_select_tgcount
 
 logger = logging.getLogger("adn-monitor")
+
+# Below this a message is about as small as text as its zlib stream.
+_PACK_MIN_BYTES = 512
 
 GROUP_NAMES = (
     "all_clients",
@@ -56,15 +60,36 @@ GROUP_NAMES = (
 )
 
 
+def pack_message(message: str) -> bytes | None:
+    """zlib stream of ``message`` for clients that read binary frames, or None when not worth it."""
+    data = message.encode()
+    return zlib.compress(data) if len(data) >= _PACK_MIN_BYTES else None
+
+
 @dataclass(eq=False)
 class WsClient:
-    """One browser tab; hashable by object id for set membership in WsHub."""
+    """One browser tab; hashable by object id for set membership in WsHub.
+
+    ``packed``: the tab opened ``/ws?z=1`` and inflates binary frames itself, so a broadcast
+    is compressed once for all such tabs instead of once per connection by permessage-deflate.
+    """
 
     websocket: WebSocket
     groups: set[str] = field(default_factory=set)
+    packed: bool = False
 
     async def send_text(self, message: str) -> None:
         await self.websocket.send_text(message)
+
+    async def send(self, frame: str | bytes) -> None:
+        if isinstance(frame, bytes):
+            await self.websocket.send_bytes(frame)
+        else:
+            await self.websocket.send_text(frame)
+
+    def frame(self, message: str) -> str | bytes:
+        packed = pack_message(message) if self.packed else None
+        return message if packed is None else packed
 
 
 class WsHub(BroadcastPort):
@@ -97,7 +122,7 @@ class WsHub(BroadcastPort):
                 self._clients[group].discard(client)
             client.groups.clear()
 
-    def _schedule_send(self, client: WsClient, message: str) -> None:
+    def _schedule_send(self, client: WsClient, frame: str | bytes) -> None:
         loop = self._loop
         if loop is None:
             try:
@@ -105,7 +130,7 @@ class WsHub(BroadcastPort):
             except RuntimeError:
                 logger.debug("WS send dropped: no event loop bound")
                 return
-        coro = self._safe_send(client, message)
+        coro = self._safe_send(client, frame)
         try:
             if asyncio.get_running_loop() is loop:
                 loop.create_task(coro)
@@ -118,17 +143,18 @@ class WsHub(BroadcastPort):
         clients = list(self._clients.get(group, ()))
         if not clients:
             return
+        packed = pack_message(message) if any(c.packed for c in clients) else None
         for client in clients:
-            self._schedule_send(client, message)
+            self._schedule_send(client, packed if packed is not None and client.packed else message)
 
     def send_to_client(self, client: Any, message: str) -> None:
         if not isinstance(client, WsClient):
             return
-        self._schedule_send(client, message)
+        self._schedule_send(client, client.frame(message))
 
-    async def _safe_send(self, client: WsClient, message: str) -> None:
+    async def _safe_send(self, client: WsClient, frame: str | bytes) -> None:
         try:
-            await client.send_text(message)
+            await client.send(frame)
         except Exception as e:
             logger.debug("WS send failed: %s", e)
 
@@ -142,11 +168,11 @@ class WsHub(BroadcastPort):
         refresh_from_server: Any = None,
     ) -> None:
         await websocket.accept()
-        client = WsClient(websocket=websocket)
+        client = WsClient(websocket=websocket, packed=websocket.query_params.get("z") == "1")
         logger.info("WebSocket client connected")
 
         def _send(text: str) -> None:
-            asyncio.create_task(self._safe_send(client, text))
+            asyncio.create_task(self._safe_send(client, client.frame(text)))
 
         def _render_last_heard() -> None:
             rows = sync_select_for_render(db_config or {}, "last_heard", conf_global.get("LH_ROWS", 20))
