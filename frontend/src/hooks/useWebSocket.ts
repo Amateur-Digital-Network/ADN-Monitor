@@ -42,10 +42,19 @@ const GROUP_OPCODE: Record<WsGroup, string> = {
 const RECONNECT_INITIAL_MS = 2000;
 const RECONNECT_MAX_DELAY_MS = 15000;
 
+/** The server then sends large messages as zlib binary frames, compressed once for every tab. */
+const INFLATES = typeof DecompressionStream !== 'undefined';
+
 function getWsUrl(): string {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const host = window.location.host;
-  return `${proto}//${host}/ws`;
+  return `${proto}//${host}/ws${INFLATES ? '?z=1' : ''}`;
+}
+
+export async function decodeFrame(data: string | ArrayBuffer): Promise<string> {
+  if (typeof data === 'string') return data;
+  const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate'));
+  return new Response(stream).text();
 }
 
 type MessageHandler = (opcode: string, payload: string) => void;
@@ -103,7 +112,10 @@ function connectShared() {
   if (activeGroups().length === 0) return;
 
   const ws = new WebSocket(getWsUrl());
+  ws.binaryType = 'arraybuffer';
   shared.ws = ws;
+  // Inflating is asynchronous: chain every message so handlers still see them in order.
+  let inbox: Promise<void> = Promise.resolve();
 
   ws.onopen = () => {
     shared.attempt = 0;
@@ -130,17 +142,22 @@ function connectShared() {
     // Close will follow; no extra handling needed
   };
 
-  ws.onmessage = (event) => {
-    const data = String(event.data);
-    const opcode = data.slice(0, 1);
-    const payload = data.slice(1);
-    for (const sub of shared.subscriptions) {
-      sub.handler(opcode, payload);
-    }
+  ws.onmessage = (event: MessageEvent<string | ArrayBuffer>) => {
+    const frame = event.data;
+    inbox = inbox
+      .then(() => decodeFrame(frame))
+      .then((data) => {
+        const opcode = data.slice(0, 1);
+        const payload = data.slice(1);
+        for (const sub of shared.subscriptions) {
+          sub.handler(opcode, payload);
+        }
+      })
+      .catch((err) => console.error(err));
   };
 }
 
-function subscribeShared(groups: WsGroup[], handler: MessageHandler): () => void {
+export function subscribeShared(groups: WsGroup[], handler: MessageHandler): () => void {
   const sub: SharedSubscription = { groups, handler };
   const newlyActive = adjustGroupRefs(groups, 1);
   shared.subscriptions.add(sub);
