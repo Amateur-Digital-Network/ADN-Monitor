@@ -4,6 +4,14 @@ All notable changes to **adn-monitor** (monitor + dashboard) are documented here
 
 <!-- version list -->
 
+## v2.6.1 (2026-10-17)
+
+### Performance Improvements
+
+- **dashboard**: Compress each WebSocket broadcast once for every tab
+  ([`258a109`](https://github.com/Amateur-Digital-Network/ADN-Monitor/commit/258a1091b693c0a488541655c6965c6871481075))
+
+
 ## v2.6.0 (2026-10-14)
 
 ### Bug Fixes
