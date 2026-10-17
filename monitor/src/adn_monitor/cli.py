@@ -78,6 +78,9 @@ def main() -> None:
         host=bind,
         port=port,
         log_level=str(log_conf.get("LOG_LEVEL", "info")).lower(),
+        # The dashboard compresses each broadcast once (WsHub, /ws?z=1); per-connection deflate
+        # would compress it again for every client.
+        ws_per_message_deflate=False,
     )
 
 
