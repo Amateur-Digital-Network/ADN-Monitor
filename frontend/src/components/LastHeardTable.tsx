@@ -33,6 +33,7 @@ import {
   TableRow,
   Paper,
   Chip,
+  useMediaQuery,
   type SxProps,
   type Theme,
 } from '@mui/material';
@@ -72,7 +73,7 @@ function protocolIconsFromText(text: string): string[] {
   return PROTOCOL_ICONS.filter((name) => s.includes(name));
 }
 
-function FlagImg({ code, fallback = 'world', hideOnPhone = false }: { code: string; fallback?: string; hideOnPhone?: boolean }) {
+function FlagImg({ code, fallback = 'world' }: { code: string; fallback?: string }) {
   const src = code ? `/img/flags/${code}.png` : `/img/flags/${fallback}.png`;
   return (
     <Box
@@ -80,13 +81,7 @@ function FlagImg({ code, fallback = 'world', hideOnPhone = false }: { code: stri
       src={src}
       alt=""
       onError={(e) => { (e.target as HTMLImageElement).src = `/img/flags/world.png`; }}
-      sx={{
-        width: 20,
-        height: 14,
-        objectFit: 'contain',
-        flexShrink: 0,
-        ...(hideOnPhone && { display: { xs: 'none', sm: 'block' } }),
-      }}
+      sx={{ width: 20, height: 14, objectFit: 'contain', flexShrink: 0 }}
     />
   );
 }
@@ -113,8 +108,6 @@ function IdChip({ id, sx }: { id: number; sx?: SxProps<Theme> }) {
   );
 }
 
-/** Cells that only make sense with room to spare: hidden on phones (xs). */
-const hideOnPhone = { display: { xs: 'none', sm: 'table-cell' } } as const;
 const headSx = { fontWeight: 600 } as const;
 
 type Props = {
@@ -130,10 +123,13 @@ type Props = {
  * On phones (xs) Date/Time/Name/System collapse: the operator name moves under
  * the callsign, the TG flag is dropped and the TG name is clamped to two lines,
  * so the table fits the viewport. From sm up the layout is unchanged.
+ * The phone variant is chosen with useMediaQuery rather than CSS, so only the
+ * active cells are rendered on every WebSocket push.
  */
 export default function LastHeardTable({ rows, caption, showSystem = false, mb = 0 }: Props) {
   const { t } = useTranslation();
   const durationLabel = t('lh_duration');
+  const isPhone = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'), { noSsr: true });
 
   return (
     <TableContainer
@@ -145,25 +141,24 @@ export default function LastHeardTable({ rows, caption, showSystem = false, mb =
         boxShadow: (theme) => (theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.08)'),
       }}
     >
-      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { px: { xs: 1, sm: 2 } } }}>
+      <Table size="small" stickyHeader sx={isPhone ? { '& .MuiTableCell-root': { px: 1 } } : undefined}>
         <TableCaptionTitle>{caption}</TableCaptionTitle>
         <TableHead>
           <TableRow sx={{ bgcolor: 'action.hover' }}>
-            <TableCell sx={{ ...headSx, ...hideOnPhone, whiteSpace: 'nowrap' }}>{t('lh_date')}</TableCell>
-            <TableCell sx={{ ...headSx, ...hideOnPhone, whiteSpace: 'nowrap' }}>{t('lh_time')}</TableCell>
+            {!isPhone && <TableCell sx={{ ...headSx, whiteSpace: 'nowrap' }}>{t('lh_date')}</TableCell>}
+            {!isPhone && <TableCell sx={{ ...headSx, whiteSpace: 'nowrap' }}>{t('lh_time')}</TableCell>}
             <TableCell sx={headSx}>{t('lh_callsignid', { defaultValue: 'Callsign (ID)' })}</TableCell>
-            <TableCell sx={{ ...headSx, ...hideOnPhone }}>{t('lh_name', { defaultValue: 'Name' })}</TableCell>
+            {!isPhone && <TableCell sx={headSx}>{t('lh_name', { defaultValue: 'Name' })}</TableCell>}
             <TableCell sx={headSx}>{t('lh_tgnum', { defaultValue: 'TG#' })}</TableCell>
             <TableCell sx={headSx}>{t('lh_tgname', { defaultValue: 'TG Name' })}</TableCell>
-            <TableCell sx={{ ...headSx, whiteSpace: 'nowrap', textAlign: { xs: 'right', sm: 'left' } }}>
-              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{durationLabel}</Box>
-              <TimerOutlinedIcon
-                titleAccess={durationLabel}
-                fontSize="small"
-                sx={{ display: { xs: 'inline-block', sm: 'none' }, verticalAlign: 'middle' }}
-              />
+            <TableCell sx={{ ...headSx, whiteSpace: 'nowrap', textAlign: isPhone ? 'right' : 'left' }}>
+              {isPhone ? (
+                <TimerOutlinedIcon titleAccess={durationLabel} fontSize="small" sx={{ verticalAlign: 'middle' }} />
+              ) : (
+                durationLabel
+              )}
             </TableCell>
-            {showSystem && <TableCell sx={{ ...headSx, ...hideOnPhone }}>{t('lh_system')}</TableCell>}
+            {showSystem && !isPhone && <TableCell sx={headSx}>{t('lh_system')}</TableCell>}
           </TableRow>
         </TableHead>
         <TableBody>
@@ -178,9 +173,9 @@ export default function LastHeardTable({ rows, caption, showSystem = false, mb =
             const protocolIcons = protocolIconsFromText(`${r.tg_callsign} ${r.system}`);
             return (
               <TableRow key={i} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
-                <TableCell sx={{ ...hideOnPhone, width: 105, minWidth: 105, whiteSpace: 'nowrap' }}>{datePart}</TableCell>
-                <TableCell sx={{ ...hideOnPhone, whiteSpace: 'nowrap' }}>{timePart}</TableCell>
-                <TableCell sx={{ minWidth: { sm: 220 } }}>
+                {!isPhone && <TableCell sx={{ width: 105, minWidth: 105, whiteSpace: 'nowrap' }}>{datePart}</TableCell>}
+                {!isPhone && <TableCell sx={{ whiteSpace: 'nowrap' }}>{timePart}</TableCell>}
+                <TableCell sx={{ minWidth: isPhone ? undefined : 220 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'nowrap' }}>
                     <FlagImg code={callFlagCode} />
                     {isBridge ? (
@@ -190,23 +185,27 @@ export default function LastHeardTable({ rows, caption, showSystem = false, mb =
                         <Typography component="span" fontWeight={600}>{r.subscriber[0]}</Typography>
                       </QrzLink>
                     ) : null}
-                    <IdChip id={r.dmr_id} sx={{ display: { xs: 'none', sm: 'inline-flex' } }} />
+                    {!isPhone && <IdChip id={r.dmr_id} />}
                   </Box>
                   {/* Phones: the ID chip and the operator name share a second line. */}
-                  <Box sx={{ display: { xs: 'flex', sm: 'none' }, alignItems: 'center', gap: 0.5, flexWrap: 'wrap', mt: 0.25 }}>
-                    <IdChip id={r.dmr_id} sx={{ height: 18, fontSize: '0.65rem' }} />
-                    {operatorName ? (
-                      <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.3 }}>
-                        {operatorName}
-                      </Typography>
-                    ) : null}
-                  </Box>
+                  {isPhone && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', mt: 0.25 }}>
+                      <IdChip id={r.dmr_id} sx={{ height: 18, fontSize: '0.65rem' }} />
+                      {operatorName ? (
+                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.3 }}>
+                          {operatorName}
+                        </Typography>
+                      ) : null}
+                    </Box>
+                  )}
                 </TableCell>
-                <TableCell sx={hideOnPhone}>
-                  <Typography component="span" variant="body2" fontWeight={600}>
-                    {operatorName ?? '—'}
-                  </Typography>
-                </TableCell>
+                {!isPhone && (
+                  <TableCell>
+                    <Typography component="span" variant="body2" fontWeight={600}>
+                      {operatorName ?? '—'}
+                    </Typography>
+                  </TableCell>
+                )}
                 <TableCell>
                   <Typography component="span" variant="body2" fontWeight={600}>
                     {r.tg_num}
@@ -214,17 +213,18 @@ export default function LastHeardTable({ rows, caption, showSystem = false, mb =
                 </TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flexWrap: 'wrap' }}>
-                    <FlagImg code={tgFlagCode} hideOnPhone />
+                    {!isPhone && <FlagImg code={tgFlagCode} />}
                     <Typography
                       component="span"
                       variant="body2"
                       fontWeight={600}
-                      sx={{
-                        display: { xs: '-webkit-box', sm: 'inline' },
-                        WebkitLineClamp: { xs: 2 },
+                      sx={isPhone ? {
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
-                        overflow: { xs: 'hidden', sm: 'visible' },
-                      }}
+                        overflow: 'hidden',
+                        wordBreak: 'break-word',
+                      } : undefined}
                     >
                       {r.tg_callsign || '—'}
                     </Typography>
@@ -233,10 +233,10 @@ export default function LastHeardTable({ rows, caption, showSystem = false, mb =
                     ))}
                   </Box>
                 </TableCell>
-                <TableCell sx={{ width: 60, textAlign: { xs: 'right', sm: 'left' } }}>
+                <TableCell sx={{ width: 60, textAlign: isPhone ? 'right' : 'left' }}>
                   {durationSec != null ? durationSec : '—'}
                 </TableCell>
-                {showSystem && <TableCell sx={hideOnPhone}>{r.system ?? '—'}</TableCell>}
+                {showSystem && !isPhone && <TableCell>{r.system ?? '—'}</TableCell>}
               </TableRow>
             );
           })}
