@@ -53,6 +53,7 @@ import { TgChipGroup } from '../components/TgChipGroup';
 import { MasterPeerCards, ServicePeerCards } from '../components/LinkedSystemsCards';
 import { lazy, Suspense, type ReactNode } from 'react';
 import { useDashboardConfig } from '../context/DashboardConfigContext';
+import { isBridge, isHotspot, isRepeater, isTerminal } from '../utils/peerKind';
 
 const SystemsMap = lazy(() => import('../components/map/SystemsMap'));
 
@@ -103,22 +104,6 @@ function activeTgFromDest(dest: string | undefined): string {
   return m ? m[0] : '';
 }
 
-function isRepeater(peerId: string, peer: PeerEntry): boolean {
-  const rx = String(peer.RX_FREQ ?? '');
-  const tx = String(peer.TX_FREQ ?? '');
-  return peerId.length === 6 && rx !== 'N/A' && tx !== 'N/A';
-}
-function isHotspot(peerId: string, peer: PeerEntry): boolean {
-  const rx = String(peer.RX_FREQ ?? '');
-  const tx = String(peer.TX_FREQ ?? '');
-  return peerId.length >= 7 && rx !== 'N/A' && tx !== 'N/A';
-}
-function isBridge(peer: PeerEntry): boolean {
-  const rx = String(peer.RX_FREQ ?? '');
-  const tx = String(peer.TX_FREQ ?? '');
-  return rx === 'N/A' && tx === 'N/A';
-}
-
 export default function Systems() {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -145,11 +130,13 @@ export default function Systems() {
   let countRepeaters = 0;
   let countHotspots = 0;
   let countBridges = 0;
+  let countTerminals = 0;
   for (const master of Object.values(masters)) {
     const peerList = master?.PEERS ?? {};
     for (const [pid, p] of Object.entries(peerList)) {
       const peer = p as PeerEntry;
-      if (isRepeater(String(pid), peer)) countRepeaters++;
+      if (isTerminal(String(pid), peer)) countTerminals++;
+      else if (isRepeater(String(pid), peer)) countRepeaters++;
       else if (isHotspot(String(pid), peer)) countHotspots++;
       else if (isBridge(peer)) countBridges++;
     }
@@ -257,6 +244,48 @@ export default function Systems() {
   };
 
   const summaryCardContentSx = { textAlign: 'center' as const };
+  const summaryCols = countTerminals > 0 ? 3 : 4;
+
+  const renderPeerSection = (
+    title: string,
+    filter: (peerId: string, peer: PeerEntry) => boolean,
+    tableKey: string
+  ) => (
+      <Paper sx={tablePaperSx}>
+        <Typography variant="subtitle1" fontWeight={600} sx={{ p: 1.5 }}>
+          {title}
+        </Typography>
+        {isNarrow ? (
+          <Box sx={{ px: 1.5, pb: 1.5 }}>
+            <MasterPeerCards
+              masters={masters}
+              filter={filter}
+              tableKey={tableKey}
+              showEmptyMasters={showEmptyMasters}
+              showTg
+              t={t}
+            />
+          </Box>
+        ) : (
+        <TableContainer sx={{ minWidth: 0 }}>
+          <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%', minWidth: tableMinWidth }}>
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'action.hover' }}>
+                <TableCell sx={{ fontWeight: 600, ...masterCols[0] }}>{t('lnksys_callsign', { defaultValue: 'Callsign' })} ({t('statictg_dmrid', { defaultValue: 'DMR Id' })})<br />{t('lnksys_loc', { defaultValue: 'Location' })}</TableCell>
+                <TableCell sx={{ fontWeight: 600, ...masterCols[1] }}>{t('lnksys_connected', { defaultValue: 'Time Connected' })}</TableCell>
+                <TableCell sx={{ fontWeight: 600, ...colSlot }} align="center">{t('lnksys_slot', { defaultValue: 'Slot' })}</TableCell>
+                <TableCell sx={{ fontWeight: 600, ...masterCols[3] }}>{t('lnksys_static_tg', { defaultValue: 'Static TG' })}</TableCell>
+                <TableCell sx={{ fontWeight: 600 }} align="center">{t('lnksys_src', { defaultValue: 'Source' })}</TableCell>
+                <TableCell sx={{ fontWeight: 600 }} align="center">{t('lnksys_dst', { defaultValue: 'Destination' })}</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody sx={linkedSystemsTableBodySx}>{renderMasterPeerRows(filter, tableKey)}</TableBody>
+          </Table>
+        </TableContainer>
+        )}
+      </Paper>
+  );
+
 
   /** Column widths: fixed so table scrolls horizontally on narrow viewports instead of overlapping. */
   const tableMinWidth = 720;
@@ -302,7 +331,7 @@ export default function Systems() {
       )}
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={summaryCols}>
           <Card sx={{ bgcolor: 'success.main', color: 'success.contrastText' }}>
             <CardContent sx={summaryCardContentSx}>
               <Typography variant="h4">{countRepeaters}</Typography>
@@ -310,7 +339,7 @@ export default function Systems() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={summaryCols}>
           <Card sx={{ bgcolor: 'warning.main', color: 'warning.contrastText' }}>
             <CardContent sx={summaryCardContentSx}>
               <Typography variant="h4">{countHotspots}</Typography>
@@ -318,7 +347,7 @@ export default function Systems() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={summaryCols}>
           <Card sx={{ bgcolor: 'error.main', color: 'error.contrastText' }}>
             <CardContent sx={summaryCardContentSx}>
               <Typography variant="h4">{countBridges}</Typography>
@@ -326,6 +355,16 @@ export default function Systems() {
             </CardContent>
           </Card>
         </Grid>
+        {countTerminals > 0 && (
+          <Grid item xs={12} sm={summaryCols}>
+            <Card sx={{ bgcolor: 'info.main', color: 'info.contrastText' }}>
+              <CardContent sx={summaryCardContentSx}>
+                <Typography variant="h4">{countTerminals}</Typography>
+                <Typography variant="body2">{t('lnksys_terminals', { defaultValue: 'ODTP terminals' })}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
       </Grid>
 
       {mapConfig.enabled && (
@@ -334,113 +373,10 @@ export default function Systems() {
         </Suspense>
       )}
 
-      {countRepeaters > 0 && (
-        <Paper sx={tablePaperSx}>
-          <Typography variant="subtitle1" fontWeight={600} sx={{ p: 1.5 }}>
-            {t('lnksys_repeaters', { defaultValue: 'Repeaters' })}
-          </Typography>
-          {isNarrow ? (
-            <Box sx={{ px: 1.5, pb: 1.5 }}>
-              <MasterPeerCards
-                masters={masters}
-                filter={isRepeater}
-                tableKey="rpt"
-                showEmptyMasters={showEmptyMasters}
-                showTg
-                t={t}
-              />
-            </Box>
-          ) : (
-          <TableContainer sx={{ minWidth: 0 }}>
-            <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%', minWidth: tableMinWidth }}>
-              <TableHead>
-                <TableRow sx={{ bgcolor: 'action.hover' }}>
-                  <TableCell sx={{ fontWeight: 600, ...masterCols[0] }}>{t('lnksys_callsign', { defaultValue: 'Callsign' })} ({t('statictg_dmrid', { defaultValue: 'DMR Id' })})<br />{t('lnksys_loc', { defaultValue: 'Location' })}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, ...masterCols[1] }}>{t('lnksys_connected', { defaultValue: 'Time Connected' })}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, ...colSlot }} align="center">{t('lnksys_slot', { defaultValue: 'Slot' })}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, ...masterCols[3] }}>{t('lnksys_static_tg', { defaultValue: 'Static TG' })}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="center">{t('lnksys_src', { defaultValue: 'Source' })}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="center">{t('lnksys_dst', { defaultValue: 'Destination' })}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody sx={linkedSystemsTableBodySx}>{renderMasterPeerRows(isRepeater, 'rpt')}</TableBody>
-            </Table>
-          </TableContainer>
-          )}
-        </Paper>
-      )}
-
-      {countHotspots > 0 && (
-        <Paper sx={tablePaperSx}>
-          <Typography variant="subtitle1" fontWeight={600} sx={{ p: 1.5 }}>
-            {t('lnksys_hotspots', { defaultValue: 'Hotspots' })}
-          </Typography>
-          {isNarrow ? (
-            <Box sx={{ px: 1.5, pb: 1.5 }}>
-              <MasterPeerCards
-                masters={masters}
-                filter={isHotspot}
-                tableKey="hts"
-                showEmptyMasters={showEmptyMasters}
-                showTg
-                t={t}
-              />
-            </Box>
-          ) : (
-          <TableContainer sx={{ minWidth: 0 }}>
-            <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%', minWidth: tableMinWidth }}>
-              <TableHead>
-                <TableRow sx={{ bgcolor: 'action.hover' }}>
-                  <TableCell sx={{ fontWeight: 600, ...masterCols[0] }}>{t('lnksys_callsign', { defaultValue: 'Callsign' })} ({t('statictg_dmrid', { defaultValue: 'DMR Id' })})<br />{t('lnksys_loc', { defaultValue: 'Location' })}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, ...masterCols[1] }}>{t('lnksys_connected', { defaultValue: 'Time Connected' })}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, ...colSlot }} align="center">{t('lnksys_slot', { defaultValue: 'Slot' })}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, ...masterCols[3] }}>{t('lnksys_static_tg', { defaultValue: 'Static TG' })}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="center">{t('lnksys_src', { defaultValue: 'Source' })}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="center">{t('lnksys_dst', { defaultValue: 'Destination' })}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody sx={linkedSystemsTableBodySx}>{renderMasterPeerRows(isHotspot, 'hts')}</TableBody>
-            </Table>
-          </TableContainer>
-          )}
-        </Paper>
-      )}
-
-      {countBridges > 0 && (
-        <Paper sx={tablePaperSx}>
-          <Typography variant="subtitle1" fontWeight={600} sx={{ p: 1.5 }}>
-            {t('lnksys_bridges', { defaultValue: 'Bridges (IP)' })}
-          </Typography>
-          {isNarrow ? (
-            <Box sx={{ px: 1.5, pb: 1.5 }}>
-              <MasterPeerCards
-                masters={masters}
-                filter={(_, p) => isBridge(p as PeerEntry)}
-                tableKey="brg"
-                showEmptyMasters={showEmptyMasters}
-                showTg
-                t={t}
-              />
-            </Box>
-          ) : (
-          <TableContainer sx={{ minWidth: 0 }}>
-            <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%', minWidth: tableMinWidth }}>
-              <TableHead>
-                <TableRow sx={{ bgcolor: 'action.hover' }}>
-                  <TableCell sx={{ fontWeight: 600, ...masterCols[0] }}>{t('lnksys_callsign', { defaultValue: 'Callsign' })} ({t('statictg_dmrid', { defaultValue: 'DMR Id' })})<br />{t('lnksys_loc', { defaultValue: 'Location' })}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, ...masterCols[1] }}>{t('lnksys_connected', { defaultValue: 'Time Connected' })}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, ...colSlot }} align="center">{t('lnksys_slot', { defaultValue: 'Slot' })}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, ...masterCols[3] }}>{t('lnksys_static_tg', { defaultValue: 'Static TG' })}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="center">{t('lnksys_src', { defaultValue: 'Source' })}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="center">{t('lnksys_dst', { defaultValue: 'Destination' })}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody sx={linkedSystemsTableBodySx}>{renderMasterPeerRows((_, p) => isBridge(p as PeerEntry), 'brg')}</TableBody>
-            </Table>
-          </TableContainer>
-          )}
-        </Paper>
-      )}
+      {countRepeaters > 0 && renderPeerSection(t('lnksys_repeaters', { defaultValue: 'Repeaters' }), isRepeater, 'rpt')}
+      {countHotspots > 0 && renderPeerSection(t('lnksys_hotspots', { defaultValue: 'Hotspots' }), isHotspot, 'hts')}
+      {countTerminals > 0 && renderPeerSection(t('lnksys_terminals', { defaultValue: 'ODTP terminals' }), isTerminal, 'odtp')}
+      {countBridges > 0 && renderPeerSection(t('lnksys_bridges', { defaultValue: 'Bridges (IP)' }), (_, p) => isBridge(p as PeerEntry), 'brg')}
 
       {Object.keys(peers).length > 0 && (
         <Paper sx={tablePaperSx}>

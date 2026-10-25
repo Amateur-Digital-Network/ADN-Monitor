@@ -256,6 +256,7 @@
   "lnksys_repeaters": "Retranslaatorid",
   "lnksys_hotspots": "Hotspots",
   "lnksys_bridges": "Sildid (IP)",
+  "lnksys_terminals": "ODTP terminalid",
   "lnksys_peers": "Teenused (PEERS)",
   "lnksys_system": "Teenus",
   "lnksys_mode": "Režiim",

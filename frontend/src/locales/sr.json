@@ -256,6 +256,7 @@
   "lnksys_repeaters": "Репитери",
   "lnksys_hotspots": "Hotspots",
   "lnksys_bridges": "Мостови (IP)",
+  "lnksys_terminals": "ODTP терминали",
   "lnksys_peers": "Сервиси (PEERS)",
   "lnksys_system": "Сервис",
   "lnksys_mode": "Режим",
