@@ -95,7 +95,21 @@ export type GpsPoint = {
   comment: string;
   lat: number;
   lon: number;
+  /** APRS symbol, when the feed has one: table ("/", "\\" or an overlay) and code. */
+  symbolTable?: string;
+  symbol?: string;
+  /** Last time the position was heard (ISO 8601), when the feed has it. */
+  heardAt?: string;
 };
+
+function aprsSymbol(entry: Record<string, unknown>): Pick<GpsPoint, 'symbolTable' | 'symbol'> {
+  const table = entry.symbol_table ?? entry.symbolTable;
+  const code = entry.symbol;
+  if (typeof table !== 'string' || typeof code !== 'string' || table.length !== 1 || code.length !== 1) {
+    return {};
+  }
+  return { symbolTable: table, symbol: code };
+}
 
 const ZERO_ISLAND = 0.0005;
 
@@ -259,6 +273,8 @@ export function parseGpsFeed(data: unknown): GpsPoint[] {
       comment: cleanText(entry.comment ?? entry.info ?? entry.status ?? ''),
       lat,
       lon,
+      ...aprsSymbol(entry),
+      heardAt: typeof (entry.heard_at ?? entry.time) === 'string' ? String(entry.heard_at ?? entry.time) : undefined,
     });
   };
 

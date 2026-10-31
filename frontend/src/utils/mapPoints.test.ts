@@ -18,7 +18,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { MapConfig } from '../context/DashboardConfigContext';
-import { buildPeerPoints, parseCoordinate, peerKind, roundCoordinate } from './mapPoints';
+import { buildPeerPoints, parseCoordinate, parseGpsFeed, peerKind, roundCoordinate } from './mapPoints';
 
 function mapConfig(overrides: Partial<MapConfig> = {}): MapConfig {
   return {
@@ -214,5 +214,24 @@ describe('buildPeerPoints', () => {
       },
     };
     expect(buildPeerPoints(ctable, mapConfig(), false)).toHaveLength(0);
+  });
+});
+
+describe('parseGpsFeed with APRS stations', () => {
+  it('keeps the APRS symbol and the time the position was heard', () => {
+    const [point] = parseGpsFeed({
+      stations: [
+        {
+          callsign: 'EA3XYZ-7', latitude: 42.5, longitude: 1.52, comment: 'ADN Systems DMR',
+          symbol_table: '/', symbol: '[', heard_at: '2026-11-01T00:02:09+00:00',
+        },
+      ],
+    });
+    expect(point).toMatchObject({ callsign: 'EA3XYZ-7', symbolTable: '/', symbol: '[', heardAt: '2026-11-01T00:02:09+00:00' });
+  });
+
+  it('ignores a malformed symbol', () => {
+    const [point] = parseGpsFeed([{ callsign: 'X', lat: 1, lon: 2, symbol_table: '//', symbol: '' }]);
+    expect(point.symbol).toBeUndefined();
   });
 });

@@ -36,7 +36,7 @@ import type { GpsPoint, PeerPoint } from '../../utils/mapPoints';
 import { centroidForDmrId } from '../../utils/countryCentroids';
 import { addBasemap, showInitialView, type Basemap } from './basemap';
 import MapGlobalStyles from './MapGlobalStyles';
-import { clusterIcon, dotIcon, serverIcon, towerIcon } from './markerIcons';
+import { aprsIcon, clusterIcon, dotIcon, serverIcon, towerIcon } from './markerIcons';
 import { escapeHtml, MARKER_COLORS, type MapLabels } from './markerStyles';
 
 type LiveMapProps = {
@@ -85,10 +85,17 @@ function peerPopup(point: PeerPoint, labels: MapLabels): string {
 }
 
 function gpsPopup(point: GpsPoint, labels: MapLabels): string {
+  // A station with an APRS symbol links to aprs.fi; its last position time when known.
+  const heard = point.heardAt ? new Date(point.heardAt) : null;
+  const aprsFi = point.symbol && point.callsign
+    ? `<a href="https://aprs.fi/#!call=a%2F${encodeURIComponent(point.callsign)}" target="_blank" rel="noopener noreferrer">aprs.fi</a>`
+    : '';
   return [
     `<div class="adn-pop-title">${escapeHtml(point.callsign || labels.gps)}</div>`,
     `<div class="adn-pop-kind">${escapeHtml(labels.gps)}</div>`,
     point.comment ? `<div class="adn-pop-row"><b>${escapeHtml(point.comment)}</b></div>` : '',
+    heard && !Number.isNaN(heard.getTime()) ? `<div class="adn-pop-row">${escapeHtml(heard.toLocaleString())}</div>` : '',
+    aprsFi ? `<div class="adn-pop-link">${aprsFi}</div>` : '',
   ].join('');
 }
 
@@ -282,8 +289,10 @@ export default function LiveMap({
       () => layers.gps,
       storesRef.current.gps,
       gps,
-      (point) => `${point.lat},${point.lon},${point.comment}`,
-      () => dotIcon(MARKER_COLORS.gps, 12),
+      (point) => `${point.lat},${point.lon},${point.comment},${point.symbolTable}${point.symbol}`,
+      (point) =>
+        (point.symbolTable && point.symbol ? aprsIcon(point.symbolTable, point.symbol, MARKER_COLORS.gps) : null)
+        ?? dotIcon(MARKER_COLORS.gps, 12),
       (point) => gpsPopup(point, labels),
     );
   }, [gps, labels]);
