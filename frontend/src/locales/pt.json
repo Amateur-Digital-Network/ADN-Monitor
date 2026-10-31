@@ -311,6 +311,7 @@
   "lnksys_repeaters": "Repetidores",
   "lnksys_hotspots": "Hotspots",
   "lnksys_bridges": "Bridges (IP)",
+  "lnksys_terminals": "Terminais ODTP",
   "lnksys_peers": "Serviços (PEERS)",
   "lnksys_system": "Serviço",
   "lnksys_mode": "Modo",

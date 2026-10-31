@@ -256,6 +256,7 @@
   "lnksys_repeaters": "ตัวทบทวนสัญญาณ",
   "lnksys_hotspots": "Hotspots",
   "lnksys_bridges": "บริดจ์ (IP)",
+  "lnksys_terminals": "เทอร์มินัล ODTP",
   "lnksys_peers": "บริการ (PEERS)",
   "lnksys_system": "บริการ",
   "lnksys_mode": "โหมด",

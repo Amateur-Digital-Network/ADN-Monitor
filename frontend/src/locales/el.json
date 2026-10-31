@@ -256,6 +256,7 @@
   "lnksys_repeaters": "Επαναλήπτες",
   "lnksys_hotspots": "Hotspots",
   "lnksys_bridges": "Γέφυρες (IP)",
+  "lnksys_terminals": "Τερματικά ODTP",
   "lnksys_peers": "Υπηρεσίες (PEERS)",
   "lnksys_system": "Υπηρεσία",
   "lnksys_mode": "Λειτουργία",

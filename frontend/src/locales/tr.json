@@ -256,6 +256,7 @@
   "lnksys_repeaters": "Tekrarlayıcılar",
   "lnksys_hotspots": "Hotspots",
   "lnksys_bridges": "Köprüler (IP)",
+  "lnksys_terminals": "ODTP terminalleri",
   "lnksys_peers": "Hizmetler (PEERS)",
   "lnksys_system": "Hizmet",
   "lnksys_mode": "Mod",
