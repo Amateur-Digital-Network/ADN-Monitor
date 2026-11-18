@@ -256,6 +256,7 @@
   "lnksys_repeaters": "Repeatery",
   "lnksys_hotspots": "Hotspots",
   "lnksys_bridges": "Mosty (IP)",
+  "lnksys_terminals": "Terminale ODTP",
   "lnksys_peers": "Usługi (PEERS)",
   "lnksys_system": "Usługa",
   "lnksys_mode": "Tryb",

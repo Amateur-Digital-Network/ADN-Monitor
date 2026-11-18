@@ -28,6 +28,7 @@ from __future__ import annotations
 import time
 from typing import Any, Callable
 
+from ..domain.peer_terminal import is_odtp_terminal
 from ..domain.value_objects import decode_utf8_field
 from .tgstats import clear_peer_voice_ts_slot
 
@@ -113,6 +114,8 @@ def add_hb_peer(
     peer["PORT"] = peer_conf.get("PORT", "")
     if peer_conf.get("RF_MODE") in ("simplex", "duplex"):
         peer["RF_MODE"] = str(peer_conf["RF_MODE"])
+    if is_odtp_terminal(peer_conf):
+        peer["TERMINAL"] = True
     for ts in (1, 2):
         peer[ts] = {
             "TS": "",

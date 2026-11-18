@@ -256,6 +256,7 @@
   "lnksys_repeaters": "中继",
   "lnksys_hotspots": "Hotspots",
   "lnksys_bridges": "网桥 (IP)",
+  "lnksys_terminals": "ODTP 终端",
   "lnksys_peers": "服务 (PEERS)",
   "lnksys_system": "服务",
   "lnksys_mode": "模式",

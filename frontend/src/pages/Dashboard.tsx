@@ -26,13 +26,6 @@ import { lazy, Suspense, useMemo } from 'react';
 import {
   Box,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   Chip,
   Card,
   CardContent,
@@ -42,7 +35,7 @@ import { useTranslation } from 'react-i18next';
 import { useWebSocketGroup } from '../hooks/useWebSocket';
 import QrzLink, { isCallsignLike } from '../components/QrzLink';
 import ActiveQsoBox, { type Ctable, type PeerEntry } from '../components/ActiveQsoBox';
-import { TableCaptionTitle } from '../components/TableCaptionTitle';
+import LastHeardTable, { type LastHeardRow } from '../components/LastHeardTable';
 import { useDashboardConfig } from '../context/DashboardConfigContext';
 import { activeQsoOrigins } from '../utils/qsoOrigins';
 
@@ -50,62 +43,7 @@ import MapFrame from '../components/map/MapFrame';
 
 const QsoOriginMap = lazy(() => import('../components/map/QsoOriginMap'));
 
-type LastHeardRow = {
-  date: string;
-  qso_time: number | string;
-  qso_type: string;
-  system: string;
-  tg_num: number;
-  tg_callsign: string;
-  dmr_id: number;
-  subscriber: string[];
-};
-
 type MainPayload = { lastheard?: LastHeardRow[]; ctable?: Ctable };
-
-/** Country code from numeric id (first 2-3 digits). */
-function getCountryCodeFromId(id: number): string {
-  const n = String(id).replace(/\D/g, '');
-  if (n.length >= 3) return n.slice(0, 3);
-  if (n.length >= 2) return n.slice(0, 2);
-  return n || '';
-}
-
-/** Country code from TG number (e.g. 21472 -> 214). */
-function getCountryCode(tgNum: number): string {
-  return getCountryCodeFromId(tgNum);
-}
-
-const PROTOCOL_ICONS = ['allstar', 'dstar', 'echolink', 'm17', 'nxdn', 'tetra', 'xlx', 'yaesu'] as const;
-
-function protocolIconsFromText(text: string): string[] {
-  const s = (text || '').toLowerCase();
-  return PROTOCOL_ICONS.filter((name) => s.includes(name));
-}
-
-function FlagImg({ code, fallback = 'world' }: { code: string; fallback?: string }) {
-  const src = code ? `/img/flags/${code}.png` : `/img/flags/${fallback}.png`;
-  return (
-    <Box
-      component="img"
-      src={src}
-      alt=""
-      onError={(e) => { (e.target as HTMLImageElement).src = `/img/flags/world.png`; }}
-      sx={{ width: 20, height: 14, objectFit: 'contain', flexShrink: 0 }}
-    />
-  );
-}
-
-function ProtocolIcon({ name }: { name: string }) {
-  return (
-    <Box
-      component="img"
-      src={`/img/bridges/${name}.png`}
-      alt={name}
-      sx={{ width: 18, height: 18, objectFit: 'contain', ml: 0.25 }}
-    />
-  );
-}
 
 type PeerChipItem = { callsign: string; system: string; activeTrx: 'RX' | 'TX' | null };
 
@@ -246,87 +184,7 @@ export default function Dashboard() {
         </Box>
       ) : null}
       {rows.length > 0 && (
-        <TableContainer
-          component={Paper}
-          sx={{
-            mt: 0,
-            mb: 2,
-            overflow: 'auto',
-            boxShadow: (t) => t.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.08)',
-          }}
-        >
-          <Table size="small" stickyHeader>
-            <TableCaptionTitle>{t('nav_dash', { defaultValue: 'Dashboard' })}</TableCaptionTitle>
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'action.hover' }}>
-                <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{t('lh_date')}</TableCell>
-                <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{t('lh_time')}</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>{t('lh_callsignid', { defaultValue: 'Callsign (ID)' })}</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>{t('lh_name', { defaultValue: 'Name' })}</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>{t('lh_tgnum', { defaultValue: 'TG#' })}</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>{t('lh_tgname', { defaultValue: 'TG Name' })}</TableCell>
-                <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{t('lh_duration')}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.map((r, i) => {
-                const dateStr = String(r.date ?? '');
-                const [datePart, timePart] = dateStr.includes(' ') ? dateStr.split(' ', 2) : [dateStr, ''];
-                const durationSec = r.qso_time != null && r.qso_time !== '' ? Math.round(Number(r.qso_time)) : null;
-                const isBridge = r.subscriber?.[0]?.toUpperCase() === 'BRIDGE';
-                const callFlagCode = getCountryCodeFromId(r.dmr_id);
-                const tgFlagCode = getCountryCode(r.tg_num);
-                const protocolIcons = protocolIconsFromText(`${r.tg_callsign} ${r.system}`);
-                return (
-                  <TableRow key={i} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
-                    <TableCell sx={{ width: 105, minWidth: 105, whiteSpace: 'nowrap' }}>{datePart}</TableCell>
-                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{timePart}</TableCell>
-                    <TableCell sx={{ minWidth: 220 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'nowrap' }}>
-                        <FlagImg code={callFlagCode} />
-                        {isBridge ? (
-                          <Typography component="span" variant="body2" fontWeight={600}>Bridge</Typography>
-                        ) : r.subscriber?.length ? (
-                          <QrzLink callsign={r.subscriber[0]}>
-                            <Typography component="span" fontWeight={600}>{r.subscriber[0]}</Typography>
-                          </QrzLink>
-                        ) : null}
-                        <Chip
-                          label={r.dmr_id}
-                          size="small"
-                          sx={{ height: 20, fontSize: '0.7rem', fontWeight: 500 }}
-                          variant="outlined"
-                        />
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography component="span" variant="body2" fontWeight={600}>
-                        {r.subscriber?.[1] ?? '—'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography component="span" variant="body2" fontWeight={600}>
-                        {r.tg_num}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flexWrap: 'wrap' }}>
-                        <FlagImg code={tgFlagCode} />
-                        <Typography component="span" variant="body2" fontWeight={600}>
-                          {r.tg_callsign || '—'}
-                        </Typography>
-                        {protocolIcons.map((name) => (
-                          <ProtocolIcon key={name} name={name} />
-                        ))}
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ width: 60 }}>{durationSec != null ? durationSec : '—'}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <LastHeardTable rows={rows} caption={t('nav_dash', { defaultValue: 'Dashboard' })} mb={2} />
       )}
       {data != null && ctable ? <ConnectedChips ctable={ctable} /> : null}
     </Box>
