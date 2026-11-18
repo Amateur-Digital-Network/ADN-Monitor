@@ -4,6 +4,24 @@ All notable changes to **adn-monitor** (monitor + dashboard) are documented here
 
 <!-- version list -->
 
+## v2.7.0 (2026-11-18)
+
+### Bug Fixes
+
+- **dashboard**: Fit the last-heard tables on phones
+  ([`3b5f73f`](https://github.com/Amateur-Digital-Network/ADN-Monitor/commit/3b5f73f413ccae29f0a7b077227ff936a5621102))
+
+### Features
+
+- **systems**: Show ODTP terminals in their own table
+  ([`bf8e382`](https://github.com/Amateur-Digital-Network/ADN-Monitor/commit/bf8e3828c3172b28d62f80b4554476e9e004f274))
+
+### Refactoring
+
+- **dashboard**: Render only the active last-heard layout
+  ([`38de41c`](https://github.com/Amateur-Digital-Network/ADN-Monitor/commit/38de41c6e7111aaa9e036eff8e54ccccfb7610e3))
+
+
 ## v2.6.1 (2026-10-17)
 
 ### Performance Improvements
