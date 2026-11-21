@@ -388,6 +388,7 @@
   "map_note": "系统按其上报的坐标显示；半透明标记为估算位置。",
   "map_note_mobile": "点击标记查看详情。",
   "map_qrz": "QRZ 资料",
+  "map_heard": "最后收到",
   "map_system": "系统",
   "map_empty": "当前图层和筛选条件下没有可显示的内容。",
   "map_empty_onair": "目前没有人通过本服务器发射。",

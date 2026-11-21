@@ -44,6 +44,7 @@ export type MapLabels = {
   tg: string;
   system: string;
   qrz: string;
+  heard: string;
 };
 
 export function escapeHtml(value: string): string {

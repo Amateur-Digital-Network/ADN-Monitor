@@ -388,6 +388,7 @@
   "map_note": "Systemy są umieszczane tam, gdzie podają swoje współrzędne; półprzezroczyste znaczniki są przybliżone.",
   "map_note_mobile": "Dotknij znacznika, aby zobaczyć szczegóły.",
   "map_qrz": "Profil QRZ",
+  "map_heard": "Ostatnio słyszany",
   "map_system": "System",
   "map_empty": "Brak elementów do pokazania przy tych warstwach i filtrach.",
   "map_empty_onair": "W tej chwili nikt nie nadaje przez ten serwer.",

@@ -388,6 +388,7 @@
   "map_note": "Sistemler bildirdikleri koordinatlara yerleştirilir; soluk işaretçiler yaklaşıktır.",
   "map_note_mobile": "Ayrıntılar için bir işaretçiye dokunun.",
   "map_qrz": "QRZ profili",
+  "map_heard": "Son duyulma",
   "map_system": "Sistem",
   "map_empty": "Bu katman ve filtrelerle gösterilecek bir şey yok.",
   "map_empty_onair": "Şu anda bu sunucu üzerinden kimse yayın yapmıyor.",

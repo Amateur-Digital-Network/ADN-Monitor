@@ -81,6 +81,37 @@ export function dotIcon(color: string, size: number): L.DivIcon {
   });
 }
 
+// Standard APRS symbol sprites, bundled in public/img/aprs (source in its README): 16 x 6
+// symbols per sheet, 48 px each, drawn at 24 px; 0 = primary "/", 1 = alternate "\\",
+// 2 = overlay characters.
+const APRS_SYMBOLS = '/img/aprs/aprs-symbols-24-';
+
+function aprsSprite(sheet: number, char: string): string | null {
+  if (char.length !== 1) return null;
+  const index = char.charCodeAt(0) - 33;
+  if (index < 0 || index > 93) return null;
+  return `background:url(${APRS_SYMBOLS}${sheet}@2x.png) ${-(index % 16) * 24}px ${-Math.floor(index / 16) * 24}px / 384px 144px`;
+}
+
+/** The station's own APRS symbol; an overlay (0-9, A-Z) is drawn over the alternate one. */
+export function aprsIcon(table: string, symbol: string, ring: string): L.DivIcon | null {
+  const primary = table === '/';
+  const base = aprsSprite(primary ? 0 : 1, symbol);
+  if (!base) return null;
+  const overlay = !primary && table !== '\\' ? aprsSprite(2, table) : null;
+  return L.divIcon({
+    className: 'adn-marker',
+    html:
+      `<span style="position:relative;display:block;width:28px;height:28px;border-radius:50%;background:#ffffff;`
+      + `box-shadow:0 0 0 2px ${ring},0 1px 4px rgba(0,0,0,.35)">`
+      + `<span style="position:absolute;left:2px;top:2px;width:24px;height:24px;${base}"></span>`
+      + (overlay ? `<span style="position:absolute;left:2px;top:2px;width:24px;height:24px;${overlay}"></span>` : '')
+      + '</span>',
+    iconSize: [28, 28],
+    tooltipAnchor: [0, -14],
+  });
+}
+
 /** Several systems close together; a click zooms in, or fans them out when they share one spot. */
 export function clusterIcon(count: number): L.DivIcon {
   const size = count < 10 ? 30 : count < 100 ? 36 : 42;

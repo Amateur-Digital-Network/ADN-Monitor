@@ -388,6 +388,7 @@
   "map_note": "I sistemi vengono collocati dove dichiarano le loro coordinate; i marcatori sbiaditi sono approssimativi.",
   "map_note_mobile": "Tocca un marcatore per i dettagli.",
   "map_qrz": "Profilo QRZ",
+  "map_heard": "Ultimo ascolto",
   "map_system": "Sistema",
   "map_empty": "Niente da mostrare con questi livelli e filtri.",
   "map_empty_onair": "In questo momento nessuno sta trasmettendo attraverso questo server.",

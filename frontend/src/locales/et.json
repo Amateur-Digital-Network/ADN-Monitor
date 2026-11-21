@@ -388,6 +388,7 @@
   "map_note": "Süsteemid paigutatakse sinna, kus nad oma koordinaadid teatavad; poolläbipaistvad markerid on ligikaudsed.",
   "map_note_mobile": "Üksikasjade nägemiseks puuduta markerit.",
   "map_qrz": "QRZ profiil",
+  "map_heard": "Viimati kuuldud",
   "map_system": "Süsteem",
   "map_empty": "Nende kihtide ja filtritega pole midagi näidata.",
   "map_empty_onair": "Praegu ei saada keegi selle serveri kaudu.",

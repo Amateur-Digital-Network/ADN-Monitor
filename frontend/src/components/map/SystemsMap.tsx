@@ -211,6 +211,7 @@ export default function SystemsMap({ ctable }: { ctable: Ctable | null | undefin
       tg: t('lnksys_static_tg', { defaultValue: 'TG' }),
       system: t('map_system', { defaultValue: 'System' }),
       qrz: t('map_qrz', { defaultValue: 'QRZ profile' }),
+      heard: t('map_heard', { defaultValue: 'Last heard' }),
     }),
     [t, mapConfig.gpsLabel],
   );
