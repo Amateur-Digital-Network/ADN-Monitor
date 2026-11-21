@@ -57,3 +57,5 @@ def read_version_pep440() -> str:
 
 
 __version__ = read_version()
+# Sent on every outgoing request, so the file servers can tell versions apart.
+USER_AGENT = f"adn-monitor/{__version__}"

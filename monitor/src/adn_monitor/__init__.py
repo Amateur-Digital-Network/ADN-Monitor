@@ -7,6 +7,6 @@
 
 """ADN Monitor Python package."""
 
-from .version import __version__, read_version, repo_root
+from .version import USER_AGENT, __version__, read_version, repo_root
 
-__all__ = ["__version__", "read_version", "repo_root"]
+__all__ = ["USER_AGENT", "__version__", "read_version", "repo_root"]
