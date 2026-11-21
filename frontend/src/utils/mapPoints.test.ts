@@ -245,4 +245,14 @@ describe('parseGpsFeed with APRS stations', () => {
     });
     expect(point).toMatchObject({ symbolTable: '\\', symbol: '>', heardAt: '2026-11-01T00:02:09.000Z' });
   });
+
+  it('accepts heard_at in milliseconds and drops an out-of-range one without failing', () => {
+    const points = parseGpsFeed([
+      { callsign: 'MS', lat: 1, lon: 2, heard_at: 1793491329000 },
+      { callsign: 'BAD', lat: 1, lon: 2, heard_at: 1e20 },
+    ]);
+    expect(points).toHaveLength(2);
+    expect(points[0].heardAt).toBe('2026-11-01T00:02:09.000Z');
+    expect(points[1].heardAt).toBeUndefined();
+  });
 });
