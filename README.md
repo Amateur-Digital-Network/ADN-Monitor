@@ -10,6 +10,24 @@ Dashboard for ADN networks: unified **FastAPI** process (REST + WebSocket + repo
 
 ---
 
+## Install with ADN-Install
+
+The easiest way to run the monitor is with [ADN-Install](https://github.com/ce5rpy/ADN-Install), on Docker or bare metal. Choose the version with `ADN_VERSION`: `stable` (latest release, the default), `develop` (this repo's `develop` branch, **for testing only**) or a release `X.Y.Z`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ce5rpy/ADN-Install/master/docker-install.sh | sudo env ADN_VERSION=develop bash
+curl -fsSL https://raw.githubusercontent.com/ce5rpy/ADN-Install/master/install.sh | sudo env ADN_VERSION=develop bash
+```
+
+On a server that is already installed, update its toolkit first, then change the version — the same command and values on Docker and bare metal:
+
+```bash
+sudo adn-docker update && sudo adn-docker version develop                 # Docker
+sudo adn-deploy update --toolkit && sudo adn-deploy version develop       # bare metal
+```
+
+`version` alone shows the current versions; `stable` goes back to the latest release. Docker images: `docker.io/ce5rpy/adn-monitor` — `:latest` and `:X.Y.Z` (releases), `:develop` and `:develop-<commit>` (each push to `develop`).
+
 ## Architecture
 
 | Part        | Folder      | Role |
