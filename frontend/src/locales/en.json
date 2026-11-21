@@ -390,6 +390,7 @@
   "map_note": "Systems are placed where they report their coordinates; faded markers are approximate.",
   "map_note_mobile": "Tap a marker for details.",
   "map_qrz": "QRZ profile",
+  "map_heard": "Last heard",
   "map_system": "System",
   "map_empty": "Nothing to show with these layers and filters.",
   "map_empty_onair": "Nobody is transmitting through this server right now.",

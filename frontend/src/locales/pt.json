@@ -388,6 +388,7 @@
   "map_note": "Os sistemas são colocados onde declaram as suas coordenadas; os marcadores translúcidos são aproximados.",
   "map_note_mobile": "Toque num marcador para ver os detalhes.",
   "map_qrz": "Perfil no QRZ",
+  "map_heard": "Ouvido pela última vez",
   "map_system": "Sistema",
   "map_empty": "Nada para mostrar com estas camadas e filtros.",
   "map_empty_onair": "Neste momento ninguém está a transmitir através deste servidor.",

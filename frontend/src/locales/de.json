@@ -388,6 +388,7 @@
   "map_note": "Systeme stehen dort, wo sie ihre Koordinaten melden; blasse Marker sind ungefähr.",
   "map_note_mobile": "Für Details auf einen Marker tippen.",
   "map_qrz": "QRZ-Profil",
+  "map_heard": "Zuletzt gehört",
   "map_system": "System",
   "map_empty": "Mit diesen Ebenen und Filtern gibt es nichts anzuzeigen.",
   "map_empty_onair": "Im Moment sendet niemand über diesen Server.",

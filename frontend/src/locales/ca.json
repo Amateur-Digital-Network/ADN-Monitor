@@ -388,6 +388,7 @@
   "map_note": "Els sistemes se situen on declaren les seves coordenades; els marcadors translúcids són aproximats.",
   "map_note_mobile": "Toca un marcador per veure'n el detall.",
   "map_qrz": "Perfil a QRZ",
+  "map_heard": "Escoltat per última vegada",
   "map_system": "Sistema",
   "map_empty": "No hi ha res a mostrar amb aquestes capes i filtres.",
   "map_empty_onair": "Ara mateix no hi ha ningú transmetent per aquest servidor.",

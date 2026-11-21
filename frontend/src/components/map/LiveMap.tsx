@@ -85,7 +85,6 @@ function peerPopup(point: PeerPoint, labels: MapLabels): string {
 }
 
 function gpsPopup(point: GpsPoint, labels: MapLabels): string {
-  // A station with an APRS symbol links to aprs.fi; its last position time when known.
   const heard = point.heardAt ? new Date(point.heardAt) : null;
   const aprsFi = point.symbol && point.callsign
     ? `<a href="https://aprs.fi/#!call=a%2F${encodeURIComponent(point.callsign)}" target="_blank" rel="noopener noreferrer">aprs.fi</a>`
@@ -94,7 +93,7 @@ function gpsPopup(point: GpsPoint, labels: MapLabels): string {
     `<div class="adn-pop-title">${escapeHtml(point.callsign || labels.gps)}</div>`,
     `<div class="adn-pop-kind">${escapeHtml(labels.gps)}</div>`,
     point.comment ? `<div class="adn-pop-row"><b>${escapeHtml(point.comment)}</b></div>` : '',
-    heard && !Number.isNaN(heard.getTime()) ? `<div class="adn-pop-row">${escapeHtml(heard.toLocaleString())}</div>` : '',
+    heard && !Number.isNaN(heard.getTime()) ? row(labels.heard, heard.toLocaleString()) : '',
     aprsFi ? `<div class="adn-pop-link">${aprsFi}</div>` : '',
   ].join('');
 }
@@ -289,7 +288,7 @@ export default function LiveMap({
       () => layers.gps,
       storesRef.current.gps,
       gps,
-      (point) => `${point.lat},${point.lon},${point.comment},${point.symbolTable}${point.symbol}`,
+      (point) => `${point.lat},${point.lon},${point.comment},${point.symbolTable}${point.symbol},${point.heardAt}`,
       (point) =>
         (point.symbolTable && point.symbol ? aprsIcon(point.symbolTable, point.symbol, MARKER_COLORS.gps) : null)
         ?? dotIcon(MARKER_COLORS.gps, 12),

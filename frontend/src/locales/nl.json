@@ -388,6 +388,7 @@
   "map_note": "Systemen staan waar ze hun coördinaten opgeven; vervaagde markers zijn bij benadering.",
   "map_note_mobile": "Tik op een marker voor details.",
   "map_qrz": "QRZ-profiel",
+  "map_heard": "Laatst gehoord",
   "map_system": "Systeem",
   "map_empty": "Niets te tonen met deze lagen en filters.",
   "map_empty_onair": "Op dit moment zendt niemand via deze server.",

@@ -81,14 +81,16 @@ export function dotIcon(color: string, size: number): L.DivIcon {
   });
 }
 
-// Standard APRS symbol sprites (https://github.com/hessu/aprs-symbols): 16 x 6 symbols of
-// 24 px per table; 0 = primary "/", 1 = alternate "\\", 2 = overlay characters.
-const APRS_SYMBOLS = 'https://cdn.jsdelivr.net/gh/hessu/aprs-symbols@master/png/aprs-symbols-24-';
+// Standard APRS symbol sprites, bundled in public/img/aprs (source in its README): 16 x 6
+// symbols per sheet, 48 px each, drawn at 24 px; 0 = primary "/", 1 = alternate "\\",
+// 2 = overlay characters.
+const APRS_SYMBOLS = '/img/aprs/aprs-symbols-24-';
 
 function aprsSprite(sheet: number, char: string): string | null {
+  if (char.length !== 1) return null;
   const index = char.charCodeAt(0) - 33;
   if (index < 0 || index > 93) return null;
-  return `background:url(${APRS_SYMBOLS}${sheet}.png) ${-(index % 16) * 24}px ${-Math.floor(index / 16) * 24}px`;
+  return `background:url(${APRS_SYMBOLS}${sheet}@2x.png) ${-(index % 16) * 24}px ${-Math.floor(index / 16) * 24}px / 384px 144px`;
 }
 
 /** The station's own APRS symbol; an overlay (0-9, A-Z) is drawn over the alternate one. */

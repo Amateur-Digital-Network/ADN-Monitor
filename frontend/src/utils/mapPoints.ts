@@ -98,7 +98,7 @@ export type GpsPoint = {
   /** APRS symbol, when the feed has one: table ("/", "\\" or an overlay) and code. */
   symbolTable?: string;
   symbol?: string;
-  /** Last time the position was heard (ISO 8601), when the feed has it. */
+  /** Last time the position was heard (ISO 8601), when the feed has it as `heard_at`. */
   heardAt?: string;
 };
 
@@ -109,6 +109,14 @@ function aprsSymbol(entry: Record<string, unknown>): Pick<GpsPoint, 'symbolTable
     return {};
   }
   return { symbolTable: table, symbol: code };
+}
+
+/** `heard_at` as an ISO 8601 string or a Unix epoch in seconds. */
+function heardAt(entry: Record<string, unknown>): Pick<GpsPoint, 'heardAt'> {
+  const heard = entry.heard_at;
+  if (typeof heard === 'string' && heard) return { heardAt: heard };
+  if (typeof heard === 'number' && Number.isFinite(heard)) return { heardAt: new Date(heard * 1000).toISOString() };
+  return {};
 }
 
 const ZERO_ISLAND = 0.0005;
@@ -259,7 +267,8 @@ type GeoJsonFeature = {
 
 /**
  * Optional external position feed (MAP.GPS_URL): GeoJSON points, a plain array
- * or ``{ stations: [...] }`` with lat/lon (or lng) plus an optional callsign.
+ * or ``{ stations: [...] }`` with lat/lon (or lng) plus an optional callsign; any of
+ * them may carry an APRS symbol (``symbol_table`` + ``symbol``) and ``heard_at``.
  */
 export function parseGpsFeed(data: unknown): GpsPoint[] {
   const points: GpsPoint[] = [];
@@ -274,7 +283,7 @@ export function parseGpsFeed(data: unknown): GpsPoint[] {
       lat,
       lon,
       ...aprsSymbol(entry),
-      heardAt: typeof (entry.heard_at ?? entry.time) === 'string' ? String(entry.heard_at ?? entry.time) : undefined,
+      ...heardAt(entry),
     });
   };
 
@@ -301,6 +310,8 @@ export function parseGpsFeed(data: unknown): GpsPoint[] {
         comment: cleanText(properties.comment ?? properties.info ?? properties.status ?? ''),
         lat,
         lon,
+        ...aprsSymbol(properties),
+        ...heardAt(properties),
       });
     });
     return points;

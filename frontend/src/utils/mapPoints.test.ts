@@ -233,5 +233,16 @@ describe('parseGpsFeed with APRS stations', () => {
   it('ignores a malformed symbol', () => {
     const [point] = parseGpsFeed([{ callsign: 'X', lat: 1, lon: 2, symbol_table: '//', symbol: '' }]);
     expect(point.symbol).toBeUndefined();
+    expect(point.symbolTable).toBeUndefined();
+  });
+
+  it('reads the symbol and heard_at from GeoJSON properties', () => {
+    const [point] = parseGpsFeed({
+      features: [{
+        geometry: { type: 'Point', coordinates: [1.52, 42.5] },
+        properties: { callsign: 'EA3XYZ-9', symbol_table: '\\', symbol: '>', heard_at: 1793491329 },
+      }],
+    });
+    expect(point).toMatchObject({ symbolTable: '\\', symbol: '>', heardAt: '2026-11-01T00:02:09.000Z' });
   });
 });
