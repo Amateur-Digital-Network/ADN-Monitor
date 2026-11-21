@@ -32,17 +32,16 @@ import os
 import urllib.request
 from pathlib import Path
 
+from ... import USER_AGENT
 from ...application.ports import AliasFileDownloaderPort
 
 logger = logging.getLogger("adn-monitor")
-
-_USER_AGENT = "ADN-Monitor/2.0"
 
 
 class UrllibAliasFileDownloader(AliasFileDownloaderPort):
     def fetch_checksums(self, checksum_url: str, timeout: int = 15) -> dict[str, str] | None:
         try:
-            req = urllib.request.Request(checksum_url, headers={"User-Agent": _USER_AGENT})
+            req = urllib.request.Request(checksum_url, headers={"User-Agent": USER_AGENT})
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
             return {k: v for k, v in data.items() if k != "timestamp" and isinstance(v, str)}
@@ -52,7 +51,7 @@ class UrllibAliasFileDownloader(AliasFileDownloaderPort):
 
     def download_file(self, url: str, dest_dir: str, file_name: str, timeout: int = 30) -> bool:
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
+            req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 data = resp.read()
             Path(dest_dir).mkdir(parents=True, exist_ok=True)

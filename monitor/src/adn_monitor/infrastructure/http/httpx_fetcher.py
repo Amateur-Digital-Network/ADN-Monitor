@@ -27,12 +27,13 @@ from __future__ import annotations
 
 import httpx
 
+from ... import USER_AGENT
 from ...application.ports import HttpFetcherPort
 from ...domain import Failure, Result, Success
 
 
 class HttpxFetcher(HttpFetcherPort):
-    def __init__(self, *, timeout: float = 25.0, user_agent: str = "ADN-Monitor-FastAPI/2.0") -> None:
+    def __init__(self, *, timeout: float = 25.0, user_agent: str = USER_AGENT) -> None:
         self._timeout = timeout
         self._user_agent = user_agent
 
