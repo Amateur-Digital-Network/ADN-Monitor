@@ -111,12 +111,20 @@ function aprsSymbol(entry: Record<string, unknown>): Pick<GpsPoint, 'symbolTable
   return { symbolTable: table, symbol: code };
 }
 
-/** `heard_at` as an ISO 8601 string or a Unix epoch in seconds. */
+/** Above this a numeric `heard_at` is taken as milliseconds (seconds would be past year 5000). */
+const EPOCH_MS_FROM = 1e11;
+
+/**
+ * `heard_at` as an ISO 8601 string or a Unix epoch (seconds, or milliseconds).
+ * An out-of-range number is dropped instead of throwing, so one bad entry
+ * cannot empty the whole GPS layer.
+ */
 function heardAt(entry: Record<string, unknown>): Pick<GpsPoint, 'heardAt'> {
   const heard = entry.heard_at;
   if (typeof heard === 'string' && heard) return { heardAt: heard };
-  if (typeof heard === 'number' && Number.isFinite(heard)) return { heardAt: new Date(heard * 1000).toISOString() };
-  return {};
+  if (typeof heard !== 'number' || !Number.isFinite(heard)) return {};
+  const date = new Date(Math.abs(heard) >= EPOCH_MS_FROM ? heard : heard * 1000);
+  return Number.isNaN(date.getTime()) ? {} : { heardAt: date.toISOString() };
 }
 
 const ZERO_ISLAND = 0.0005;
