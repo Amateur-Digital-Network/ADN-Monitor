@@ -29,6 +29,7 @@ from contextlib import contextmanager
 from typing import Any, Iterator
 
 import MySQLdb
+from MySQLdb.constants import CLIENT
 
 
 class SyncMysqlPool:
@@ -49,6 +50,8 @@ class SyncMysqlPool:
             db=self._db,
             port=self._port,
             charset="utf8mb4",
+            # rowcount counts matched rows, so re-saving identical values is not "no row updated".
+            client_flag=CLIENT.FOUND_ROWS,
         )
 
     @contextmanager
