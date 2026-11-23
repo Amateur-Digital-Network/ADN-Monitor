@@ -61,3 +61,10 @@ def test_normalize_adds_trailing_semicolon():
 def test_normalize_empty_returns_none():
     assert normalize_options_for_save("") is None
     assert normalize_options_for_save("   ") is None
+
+
+def test_normalize_rejects_options_wider_than_the_clients_column():
+    fits = "TS2=" + "7," * 147 + "7"
+    assert len(fits) + 1 == 300
+    assert normalize_options_for_save(fits) == fits + ";"
+    assert normalize_options_for_save(fits + "7") is None

@@ -35,7 +35,8 @@ single normalized shape. Other OpenSpot parameters (``StartRef``,
 
 from __future__ import annotations
 
-OPTIONS_MAX_LENGTH = 4096
+# Width of Clients.options (schema migration 002); longer values would not fit the column.
+OPTIONS_MAX_LENGTH = 300
 
 _OPENSLOT_SLOTS = ("TS1", "TS2")
 
